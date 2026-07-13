@@ -5,7 +5,7 @@ import { logger } from "./utils/logger";
 // ── Import command modules (side-effect: registers into commands / buttonHandlers / …) ──
 import "./commands/ping/ping";
 import "./commands/todo/todo";
-// Phase 1+: import "./commands/goal/goal";
+import "./commands/goal/goal";
 // Phase 1+: import "./commands/remind/remind";
 // Phase 1+: import "./commands/today/today";
 // Phase 1+: import "./commands/settings/settings";
