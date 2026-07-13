@@ -1,7 +1,7 @@
 import type { Client } from "discord.js";
-import type { Logger } from "pino";
+import { logger } from "../utils/logger";
 
-export function registerReadyEvent(client: Client, logger: Logger): void {
+export function registerReadyEvent(client: Client): void {
   client.once("ready", (readyClient) => {
     logger.info({ tag: readyClient.user.tag }, "Bot ready");
   });

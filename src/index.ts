@@ -1,13 +1,14 @@
 import { Client, GatewayIntentBits } from "discord.js";
-import pino from "pino";
 import { env } from "./config/env";
+import { logger } from "./utils/logger";
 
-export const logger = pino({
-  transport:
-    process.env.NODE_ENV !== "production"
-      ? { target: "pino-pretty", options: { colorize: true } }
-      : undefined,
-});
+// ── Import command modules (side-effect: registers into commands / buttonHandlers / …) ──
+import "./commands/ping/ping";
+// Phase 1+: import "./commands/todo/todo";
+// Phase 1+: import "./commands/goal/goal";
+// Phase 1+: import "./commands/remind/remind";
+// Phase 1+: import "./commands/today/today";
+// Phase 1+: import "./commands/settings/settings";
 
 async function main() {
   const client = new Client({
@@ -23,18 +24,16 @@ async function main() {
 
   // Load event handlers
   const { registerReadyEvent } = await import("./events/ready");
-  const { registerInteractionCreateEvent } = await import(
-    "./events/interactionCreate"
-  );
+  const { registerInteractionCreate } = await import("./events/interactionCreate");
 
-  registerReadyEvent(client, logger);
-  registerInteractionCreateEvent(client, logger);
+  registerReadyEvent(client);
+  registerInteractionCreate(client);
 
   await client.login(env.DISCORD_TOKEN);
 }
 
 main().catch((err) => {
-  // Use console.error here since pino might not be initialised if the crash is very early
+  // Use console.error here since the logger init itself could be the crash
   console.error("Fatal error during startup:", err);
   process.exit(1);
 });
