@@ -14,6 +14,7 @@ import "./commands/today/today";
 import "./commands/focus/focus";
 import "./commands/streak/streak";
 import "./commands/stats/stats";
+import "./commands/level/level";
 
 async function main() {
   const client = new Client({

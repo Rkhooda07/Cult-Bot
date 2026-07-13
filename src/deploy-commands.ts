@@ -34,6 +34,9 @@ import "./commands/settings/settings";
 import "./commands/today/today";
 // Phase 2+: import "./commands/focus/focus";
 import "./commands/focus/focus";
+import "./commands/streak/streak";
+import "./commands/stats/stats";
+import "./commands/level/level";
 // (add more as phases are built)
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../database/prisma";
 
 export interface XPResult {
   xpGained: number;
@@ -10,19 +8,32 @@ export interface XPResult {
 }
 
 /**
- * Award XP to a user, bumping their level if threshold crossed.
- * Simple linear formula for Phase 2: level = floor(sqrt(xp / 100)) + 1
- * Full formula in Phase 3.
+ * Returns the cumulative XP required to complete level n.
+ * Formula: xpForLevel(n) = 50 * n²
+ */
+export function xpForLevel(n: number): number {
+  return 50 * n * n;
+}
+
+/**
+ * Recalculates level for a given amount of cumulative XP.
+ * Threshold to reach level L is xpForLevel(L - 1).
+ * Level 1: [0, 50)
+ * Level 2: [50, 200)
+ * Level 3: [200, 450)
+ * etc.
+ * level = floor(sqrt(xp / 50)) + 1
  */
 export function calculateLevel(xp: number): number {
-  return Math.floor(Math.sqrt(xp / 100)) + 1;
+  if (xp < 0) return 1;
+  return Math.floor(Math.sqrt(xp / 50)) + 1;
 }
 
 /**
  * Award XP to a user, creating an XPLog entry and updating User.xp + User.level.
  * Returns the result with leveledUp flag.
  */
-export async function awardXP(
+export async function award(
   userId: string,
   amount: number,
   reason: string
@@ -49,11 +60,14 @@ export async function awardXP(
 }
 
 /**
- * Phase 2 stub — award flat +25 XP for completing a focus session.
- * Calls the real awardXP internally.
+ * Legacy/compatibility helper for awarding XP (delegates to award).
  */
-export async function awardFocusCompletionXP(userId: string): Promise<XPResult> {
-  return awardXP(userId, 25, "Focus session completed");
+export async function awardXP(
+  userId: string,
+  amount: number,
+  reason: string
+): Promise<XPResult> {
+  return award(userId, amount, reason);
 }
 
 export async function getUserXP(userId: string): Promise<{ xp: number; level: number }> {

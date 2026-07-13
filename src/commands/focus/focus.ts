@@ -3,7 +3,7 @@ import { commands, buttonHandlers } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
 import { encode } from "../../utils/customId";
 import { ensureUser, createSession, getActiveSession, completeSession, abandonSession } from "../../services/focusService";
-import { awardXP } from "../../services/xpService";
+import { award } from "../../services/xpService";
 import { logger } from "../../utils/logger";
 
 commands.set("focus", {
@@ -111,7 +111,7 @@ buttonHandlers.set("focus:complete", async (interaction) => {
   }
 
   // Award XP
-  const xpResult = await awardXP(ownerId, 25, "focus_session");
+  const xpResult = await award(ownerId, 25, "focus_session");
 
   const embed = createEmbed("focus")
     .setTitle("✅ Focus Session Complete!")
@@ -119,6 +119,15 @@ buttonHandlers.set("focus:complete", async (interaction) => {
     .setFooter({ text: `DevOS • ${interaction.user.username}` });
 
   await interaction.update({ embeds: [embed], components: [] });
+
+  if (xpResult.leveledUp) {
+    const levelUpEmbed = createEmbed("xp")
+      .setTitle("🎉 Level Up!")
+      .setDescription(`Congratulations, **${interaction.user.username}**! You've leveled up to **Level ${xpResult.newLevel}**!\nKeep up the great work! 🚀`)
+      .setThumbnail(interaction.user.displayAvatarURL());
+
+    await interaction.followUp({ embeds: [levelUpEmbed], ephemeral: true });
+  }
 });
 
 function decodeCustomId(customId: string): { domain: string; action: string; ownerId: string; entityId: string } {
