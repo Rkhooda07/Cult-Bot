@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import { commands } from "../../registry";
-import { createEmbed, COLORS } from "../../utils/embedFactory";
+import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
 import { getLeaderboard } from "../../services/leaderboardService";
 
@@ -23,7 +23,7 @@ commands.set("leaderboard", {
     const guildId = interaction.guildId;
     if (!guildId) {
       await interaction.reply({
-        embeds: [createEmbed("error").setTitle("❌ Error").setDescription("This command can only be used in a server.")],
+        embeds: [createErrorEmbed("This command can only be used in a server.")],
         ephemeral: true,
       });
       return;
@@ -37,14 +37,16 @@ commands.set("leaderboard", {
 
       if (entries.length === 0) {
         await interaction.editReply({
-          embeds: [createEmbed("leaderboard").setTitle("🏆 Leaderboard").setDescription("No data yet. Start completing tasks to climb the ranks!")],
+          embeds: [
+            createEmbed("leaderboard").setTitle("🏆 Leaderboard").setDescription("No data yet. Start completing tasks to climb the ranks!"),
+          ],
         });
         return;
       }
 
-      const medalEmojis = ["🥇", "🥈", "🥉"];
+      const medals = ["🥇", "🥈", "🥉"];
       const lines = entries.map((e, i) => {
-        const medal = i < 3 ? medalEmojis[i] : `${i + 1}.`;
+        const medal = i < 3 ? medals[i] : `${i + 1}.`;
         return `${medal} **${e.username}** — ${e.xp} XP (Lv. ${e.level})`;
       });
 
@@ -57,7 +59,7 @@ commands.set("leaderboard", {
     } catch (error) {
       logger.error({ err: error, guildId }, "Error fetching leaderboard");
       await interaction.editReply({
-        embeds: [createEmbed("error").setTitle("❌ Error").setDescription("Failed to fetch leaderboard. Please try again later.")],
+        embeds: [createErrorEmbed("Failed to fetch leaderboard. Please try again later.")],
       });
     }
   },
