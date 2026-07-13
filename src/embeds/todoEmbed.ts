@@ -23,10 +23,10 @@ export function createTodoEmbed(
   const { todos, page, totalPages } = data;
 
   const embed = createEmbed("todo")
-    .setTitle(`📝 ${username}'s Checklist`)
-    .setDescription(buildTodoList(todos));
+    .setTitle(`📝 ${username}'s Checklist`);
 
   if (stats.total > 0) {
+    embed.setDescription(buildTodoList(todos));
     const bar = progressBar(stats.percent, 10);
     embed.addFields({
       name: "Progress",
