@@ -2,13 +2,10 @@ import { prisma } from "../database/prisma";
 import { DateTime } from "luxon";
 import { logger } from "../utils/logger";
 import { getUserTimezone } from "./reminderService";
-import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../config/env";
 
-const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-
 const CACHE_TTL_HOURS = 24;
-const COACH_MODEL = "claude-3-5-sonnet-20241022";
+const COACH_MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
 
 function hashData(data: object): string {
   const str = JSON.stringify(data);
@@ -86,17 +83,33 @@ async function gatherUserData(userId: string) {
   };
 }
 
-async function callAnthropic(data: Awaited<ReturnType<typeof gatherUserData>>): Promise<string> {
+async function callNvidiaNim(data: Awaited<ReturnType<typeof gatherUserData>>): Promise<string> {
   const prompt = `Given this user's task completion data ${JSON.stringify(data)}, write a 3-sentence, encouraging productivity coaching note. Mention one concrete task they should prioritize today. Keep it under 60 words.`;
 
-  const response = await anthropic.messages.create({
-    model: COACH_MODEL,
-    max_tokens: 100,
-    temperature: 0.7,
-    messages: [{ role: "user", content: prompt }],
+  const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.NIM_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: COACH_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 150,
+      temperature: 0.7,
+    }),
   });
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`NVIDIA NIM API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  const json = (await response.json()) as {
+    choices?: { message?: { content?: string } }[];
+  };
+
+  const text = json.choices?.[0]?.message?.content || "";
   return text.trim();
 }
 
@@ -127,8 +140,8 @@ export async function getCoachNote(userId: string): Promise<string> {
   const cached = await getCachedResponse(userId, dataHash);
   if (cached) return cached;
 
-  logger.info({ userId }, "Generating new coach response via Anthropic");
-  const response = await callAnthropic(data);
+  logger.info({ userId }, "Generating new coach response via NVIDIA NIM");
+  const response = await callNvidiaNim(data);
   await setCachedResponse(userId, dataHash, response);
   return response;
 }

@@ -47,7 +47,7 @@ Edit `.env` and fill in:
 | `DISCORD_TOKEN` | Bot token from the Discord Developer Portal |
 | `DISCORD_CLIENT_ID` | Application ID from the Developer Portal |
 | `DATABASE_URL` | PostgreSQL connection string |
-| `ANTHROPIC_API_KEY` | API key for the AI coach (Claude) |
+| `NIM_API_KEY` | API key for the AI coach (NVIDIA NIM) |
 | `GITHUB_TOKEN` | *(optional)* Personal access token — raises GitHub API rate limits for the poller |
 
 ### 3. Enable privileged intents in the Discord Developer Portal

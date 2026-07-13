@@ -17,7 +17,6 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.35.0",
     "@discordjs/builders": "^1.10.0",
     "@prisma/client": "^6.0.0",
     "chrono-node": "^2.7.7",

@@ -57,7 +57,7 @@ Your original plan left these open. They're locked now so every phase builds on 
 | Date/time parsing | chrono-node | natural language ("tomorrow 8am") |
 | Date/time math | luxon | timezone-aware arithmetic |
 | Logging | pino | structured logs, not console.log |
-| AI coach | Anthropic API (Claude) | see Section 9 |
+| AI coach | NVIDIA NIM API (Nemotron 3 Ultra) | see Section 9 |
 | Containerization | Docker + docker-compose | bot + postgres (+ redis if used) |
 
 ---
@@ -451,7 +451,7 @@ Evaluated by `badgeService.evaluate(userId)` after every XP-awarding event; newl
 - Input to the model: last 7 days of todo completion rate, most productive hour-of-day (derived from `PomodoroSession.startedAt` clustering), incomplete goals nearing deadline.
 - Prompt template (paraphrase, don't hardcode verbatim marketing copy):
   > "Given this user's task completion data [JSON], write a 3-sentence, encouraging productivity coaching note. Mention one concrete task they should prioritize today. Keep it under 60 words."
-- Call the Anthropic Messages API (see `/mnt/skills/public/product-self-knowledge` conventions if the build agent is also wiring this to Claude directly — use the current API model string, not a hardcoded old one).
+- Call the NVIDIA NIM Chat Completions API with the Nemotron 3 Ultra model.
 - Cache result per user for 24h in the DB (`coachCache` field or a small `CoachResponse` table) to avoid redundant calls on repeated `/coach` taps.
 
 ---
@@ -464,7 +464,7 @@ Evaluated by `badgeService.evaluate(userId)` after every XP-awarding event; newl
 - **Logging:** pino structured logs for command usage, cron runs, and errors — no bare `console.log`.
 - **Error handling:** every command handler wrapped in try/catch; user-facing errors are a red-embed, not a stack trace; full error logged server-side.
 - **Gateway Intents:** `GuildMembers` (privileged) must be enabled in the Discord Developer Portal and requested via `GatewayIntentBits.GuildMembers` in the client constructor — required to resolve shared guilds for activity broadcasts (Section 12). Without it, broadcasts will silently find zero shared guilds.
-- **Env config:** `config/env.ts` validates `DATABASE_URL`, `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN` (optional, for higher rate limits) at boot; fail fast with a clear message if missing.
+- **Env config:** `config/env.ts` validates `DATABASE_URL`, `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `NIM_API_KEY`, `GITHUB_TOKEN` (optional, for higher rate limits) at boot; fail fast with a clear message if missing.
 - **Deployment:** `docker-compose.yml` with `bot` + `postgres` services (add `redis` only if/when Phase 2+ upgrade is adopted). Prisma migrations run on container start.
 
 ---
