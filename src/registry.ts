@@ -3,6 +3,7 @@ import type {
   ButtonInteraction,
   StringSelectMenuInteraction,
   ModalSubmitInteraction,
+  AutocompleteInteraction,
   SlashCommandBuilder,
 } from "discord.js";
 
@@ -24,6 +25,10 @@ export type SelectExecutor = (
 
 export type ModalExecutor = (
   interaction: ModalSubmitInteraction
+) => Promise<void>;
+
+export type AutocompleteExecutor = (
+  interaction: AutocompleteInteraction
 ) => Promise<void>;
 
 // ---------------------------------------------------------------------------
@@ -68,3 +73,9 @@ export const selectHandlers = new Map<string, SelectExecutor>();
  * check is skipped for modal submits where ownerId is not embedded.
  */
 export const modalHandlers = new Map<string, ModalExecutor>();
+
+/**
+ * Autocomplete handler registry.
+ * Key: command name (e.g. "challenge").
+ */
+export const autocompleteHandlers = new Map<string, AutocompleteExecutor>();

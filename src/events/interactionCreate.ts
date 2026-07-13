@@ -1,7 +1,7 @@
 import { Events } from "discord.js";
 import type { Client, Interaction } from "discord.js";
 import { logger } from "../utils/logger";
-import { commands, buttonHandlers, selectHandlers, modalHandlers } from "../registry";
+import { commands, buttonHandlers, selectHandlers, modalHandlers, autocompleteHandlers } from "../registry";
 import { decode } from "../utils/customId";
 import { assertOwner } from "../utils/permissions";
 import { createErrorEmbed } from "../utils/embedFactory";
@@ -39,6 +39,20 @@ export function registerInteractionCreate(client: Client): void {
           "Dispatching slash command"
         );
         await handler.execute(interaction);
+        return;
+      }
+
+      // ── Autocomplete ──────────────────────────────────────────────────────
+      if (interaction.isAutocomplete()) {
+        const handler = autocompleteHandlers.get(interaction.commandName);
+        if (!handler) {
+          logger.debug(
+            { commandName: interaction.commandName },
+            "No autocomplete handler registered"
+          );
+          return;
+        }
+        await handler(interaction);
         return;
       }
 
