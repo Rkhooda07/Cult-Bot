@@ -84,7 +84,7 @@ async function gatherUserData(userId: string) {
 }
 
 async function callNvidiaNim(data: Awaited<ReturnType<typeof gatherUserData>>): Promise<string> {
-  const prompt = `Given this user's task completion data ${JSON.stringify(data)}, write a 3-sentence, encouraging productivity coaching note. Mention one concrete task they should prioritize today. Keep it under 60 words.`;
+  const prompt = `Given this user's task completion data ${JSON.stringify(data)}, write a 3-sentence, encouraging productivity coaching note. Mention one concrete task they should prioritize today. Keep it under 60 words. Respond with only the note itself, wrapped in <note></note> tags, with no other text before or after.`;
 
   const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
@@ -94,7 +94,10 @@ async function callNvidiaNim(data: Awaited<ReturnType<typeof gatherUserData>>): 
     },
     body: JSON.stringify({
       model: COACH_MODEL,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: "detailed thinking off" },
+        { role: "user", content: prompt }
+      ],
       max_tokens: 150,
       temperature: 0.7,
     }),
@@ -109,8 +112,16 @@ async function callNvidiaNim(data: Awaited<ReturnType<typeof gatherUserData>>): 
     choices?: { message?: { content?: string } }[];
   };
 
-  const text = json.choices?.[0]?.message?.content || "";
-  return text.trim();
+  const rawText = json.choices?.[0]?.message?.content || "";
+  const match = rawText.match(/<note>([\s\S]*?)<\/note>/);
+  let text = match ? match[1].trim() : "";
+
+  if (!text) {
+    logger.warn({ rawText }, "Failed to extract coaching note from model response; using fallback");
+    text = "Keep up the momentum today!";
+  }
+
+  return text;
 }
 
 async function getCachedResponse(userId: string, dataHash: string): Promise<string | null> {
