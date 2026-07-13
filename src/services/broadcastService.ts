@@ -172,3 +172,12 @@ function buildBroadcastEmbed(args: {
 
   return embed;
 }
+
+export async function getGuildSharedMembers(guildId: string): Promise<Array<{ id: string; username: string }>> {
+  const client = getClient();
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild) return [];
+
+  const members = guild.members.cache.filter((m) => !m.user.bot);
+  return members.map((m) => ({ id: m.id, username: m.user.username }));
+}
