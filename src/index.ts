@@ -13,6 +13,7 @@ import "./commands/today/today";
 // Phase 2+: import "./commands/focus/focus";
 import "./commands/focus/focus";
 import "./commands/streak/streak";
+import "./commands/stats/stats";
 
 async function main() {
   const client = new Client({
