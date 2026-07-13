@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id // discord user id
+  username         String
+  timezone         String   @default("UTC")
+  xp               Int      @default(0)
+  level            Int      @default(1)
+  broadcastEnabled Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  todos            Todo[]
+  goals            Goal[]
+  reminders        Reminder[]
+  habits           Habit[]
+  pomodoroSessions PomodoroSession[]
+  xpLogs           XPLog[]
+  badges           UserBadge[]
+  streak           Streak?
+  githubLink       GithubLink?
+  leetcodeLink     LeetCodeLink?
+  codeforcesLink   CodeforcesLink?
+  challengeEntries ChallengeParticipant[]
+}
+
+model Todo {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  content   String
+  done      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  doneAt    DateTime?
+  dueDate   DateTime?
+}
+
+model Goal {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  title       String
+  deadline    DateTime?
+  status      GoalStatus @default(IN_PROGRESS)
+  progress    Int        @default(0) // 0-100
+  createdAt   DateTime   @default(now())
+  completedAt DateTime?
+}
+
+enum GoalStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+model Reminder {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  channelId String
+  message   String
+  remindAt  DateTime
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Habit {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id])
+  name      String
+  frequency HabitFrequency @default(DAILY)
+  createdAt DateTime       @default(now())
+  logs      HabitLog[]
+}
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+}
+
+model HabitLog {
+  id        String   @id @default(cuid())
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id])
+  date      DateTime
+  completed Boolean  @default(true)
+}
+
+model PomodoroSession {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  durationMin Int
+  startedAt   DateTime      @default(now())
+  completedAt DateTime?
+  status      SessionStatus @default(IN_PROGRESS)
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+model Streak {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id])
+  current        Int       @default(0)
+  best           Int       @default(0)
+  lastActiveDate DateTime?
+}
+
+model XPLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  key         String      @unique
+  name        String
+  description String
+  icon        String
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  badgeId  String
+  badge    Badge    @relation(fields: [badgeId], references: [id])
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+model GithubLink {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id])
+  username      String
+  lastCommitSha String?
+}
+
+model LeetCodeLink {
+  id              String @id @default(cuid())
+  userId          String @unique
+  user            User   @relation(fields: [userId], references: [id])
+  username        String
+  lastSolvedCount Int    @default(0)
+}
+
+model CodeforcesLink {
+  id         String @id @default(cuid())
+  userId     String @unique
+  user       User   @relation(fields: [userId], references: [id])
+  handle     String
+  lastRating Int?
+}
+
+model GuildSettings {
+  id                String  @id // discord guild id
+  announceChannelId String?
+  leaderboardOptIn  Boolean @default(true)
+}
+
+model CommunityChallenge {
+  id           String                 @id @default(cuid())
+  guildId      String
+  title        String
+  description  String
+  startsAt     DateTime
+  endsAt       DateTime
+  participants ChallengeParticipant[]
+}
+
+model ChallengeParticipant {
+  id          String             @id @default(cuid())
+  challengeId String
+  challenge   CommunityChallenge @relation(fields: [challengeId], references: [id])
+  userId      String
+  user        User               @relation(fields: [userId], references: [id])
+  completed   Boolean            @default(false)
+  joinedAt    DateTime           @default(now())
+
+  @@unique([challengeId, userId])
+}
