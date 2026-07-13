@@ -9,6 +9,7 @@ import "./commands/goal/goal";
 import "./commands/reminders/remind";
 import "./commands/settings/settings";
 // Phase 1+: import "./commands/today/today";
+import "./commands/today/today";
 
 async function main() {
   const client = new Client({

@@ -198,3 +198,17 @@ export async function getUserTimezone(userId: string): Promise<string> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { timezone: true } });
   return user?.timezone || "UTC";
 }
+
+export async function getTodaysReminderCount(userId: string, timezone: string): Promise<number> {
+  const now = DateTime.now().setZone(timezone);
+  const startOfDay = now.startOf("day").toJSDate();
+  const endOfDay = now.endOf("day").toJSDate();
+
+  return prisma.reminder.count({
+    where: {
+      userId,
+      sent: false,
+      remindAt: { gte: startOfDay, lte: endOfDay },
+    },
+  });
+}

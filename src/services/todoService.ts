@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { DateTime } from "luxon";
 
 const prisma = new PrismaClient();
 
@@ -148,4 +149,31 @@ export async function getTodoStats(userId: string): Promise<{ total: number; com
   const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
 
   return { total, completed, percent };
+}
+
+export async function getTodaysOpenTodos(userId: string, timezone: string): Promise<TodoItem[]> {
+  const now = DateTime.now().setZone(timezone);
+  const startOfDay = now.startOf("day").toJSDate();
+  const endOfDay = now.endOf("day").toJSDate();
+
+  const todos = await prisma.todo.findMany({
+    where: {
+      userId,
+      done: false,
+      OR: [
+        { dueDate: { gte: startOfDay, lte: endOfDay } },
+        { dueDate: null },
+      ],
+    },
+    orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
+  });
+
+  return todos.map((t) => ({
+    id: t.id,
+    content: t.content,
+    done: t.done,
+    createdAt: t.createdAt,
+    doneAt: t.doneAt,
+    dueDate: t.dueDate,
+  }));
 }

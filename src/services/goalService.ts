@@ -232,3 +232,15 @@ export function formatDeadline(deadline: Date | null, timezone: string): string 
   const dt = DateTime.fromJSDate(deadline, { zone: "utc" }).setZone(timezone);
   return dt.toFormat("MMM d, yyyy");
 }
+
+export async function getAverageInProgressProgress(userId: string): Promise<number> {
+  const goals = await prisma.goal.findMany({
+    where: { userId, status: "IN_PROGRESS" },
+    select: { progress: true },
+  });
+
+  if (goals.length === 0) return 0;
+
+  const sum = goals.reduce((acc, g) => acc + g.progress, 0);
+  return Math.round(sum / goals.length);
+}

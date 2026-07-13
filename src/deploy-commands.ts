@@ -31,6 +31,7 @@ import "./commands/goal/goal";
 import "./commands/reminders/remind";
 import "./commands/settings/settings";
 // Phase 1+: import "./commands/today/today";
+import "./commands/today/today";
 // (add more as phases are built)
 
 // ---------------------------------------------------------------------------

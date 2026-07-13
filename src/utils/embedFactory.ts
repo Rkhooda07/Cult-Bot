@@ -17,6 +17,7 @@ export const COLORS = {
   badges: 0x1abc9c,
   leaderboard: 0xf1c40f,
   coach: 0x6c5ce7,
+  today: 0x3498db,
   error: 0xed4245,
 } as const;
 
