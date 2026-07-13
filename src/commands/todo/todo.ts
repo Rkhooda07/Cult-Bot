@@ -98,12 +98,12 @@ buttonHandlers.set("todo:edit", async (interaction: ButtonInteraction) => {
     .setMinValues(1)
     .setMaxValues(1)
     .addOptions(
-      todos.slice(0, 25).map((todo, idx) =>
-        new StringSelectMenuOptionBuilder()
-          .setLabel(`${idx + 1}. ${todo.content}`)
-          .setValue(todo.id)
-          .setEmoji(todo.done ? "✔" : "☐")
-      )
+      todos.slice(0, 25).map((todo, idx) => {
+        const emoji = todo.done ? "✔" : "☐";
+        return new StringSelectMenuOptionBuilder()
+          .setLabel(`${emoji} ${idx + 1}. ${todo.content}`.slice(0, 100))
+          .setValue(todo.id);
+      })
     );
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
@@ -147,12 +147,12 @@ buttonHandlers.set("todo:delete", async (interaction: ButtonInteraction) => {
     .setMinValues(1)
     .setMaxValues(todos.length)
     .addOptions(
-      todos.slice(0, 25).map((todo, idx) =>
-        new StringSelectMenuOptionBuilder()
-          .setLabel(`${idx + 1}. ${todo.content}`)
-          .setValue(todo.id)
-          .setEmoji(todo.done ? "✔" : "☐")
-      )
+      todos.slice(0, 25).map((todo, idx) => {
+        const emoji = todo.done ? "✔" : "☐";
+        return new StringSelectMenuOptionBuilder()
+          .setLabel(`${emoji} ${idx + 1}. ${todo.content}`.slice(0, 100))
+          .setValue(todo.id);
+      })
     );
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
@@ -186,9 +186,8 @@ buttonHandlers.set("todo:complete", async (interaction: ButtonInteraction) => {
     .addOptions(
       incompleteTodos.slice(0, 25).map((todo, idx) =>
         new StringSelectMenuOptionBuilder()
-          .setLabel(`${idx + 1}. ${todo.content}`)
+          .setLabel(`☐ ${idx + 1}. ${todo.content}`.slice(0, 100))
           .setValue(todo.id)
-          .setEmoji("☐")
       )
     );
 
