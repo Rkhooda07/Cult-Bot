@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import * as chrono from "chrono-node";
 import { DateTime } from "luxon";
+import { updateStreak } from "./streakService";
 
 const prisma = new PrismaClient();
 
@@ -155,6 +156,10 @@ export async function updateGoalProgress(
     data: { progress, status, completedAt },
   });
 
+  if (result.count > 0 && progress >= 100) {
+    await updateStreak(userId);
+  }
+
   return result.count > 0;
 }
 
@@ -163,6 +168,10 @@ export async function completeGoal(userId: string, goalId: string): Promise<bool
     where: { id: goalId, userId, status: "IN_PROGRESS" },
     data: { status: "COMPLETED", progress: 100, completedAt: new Date() },
   });
+
+  if (result.count > 0) {
+    await updateStreak(userId);
+  }
 
   return result.count > 0;
 }

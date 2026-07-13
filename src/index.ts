@@ -12,6 +12,7 @@ import "./commands/settings/settings";
 import "./commands/today/today";
 // Phase 2+: import "./commands/focus/focus";
 import "./commands/focus/focus";
+import "./commands/streak/streak";
 
 async function main() {
   const client = new Client({
@@ -35,6 +36,10 @@ async function main() {
   // Start reminder poller (runs every 60s)
   const { startReminderPoller } = await import("./cron/reminderPoller");
   startReminderPoller(client);
+
+  // Start streak check cron job (runs every hour)
+  const { startStreakCheck } = await import("./cron/streakCheck");
+  startStreakCheck(client);
 
   await client.login(env.DISCORD_TOKEN);
 }

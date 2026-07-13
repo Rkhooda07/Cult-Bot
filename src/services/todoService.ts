@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { DateTime } from "luxon";
+import { updateStreak } from "./streakService";
 
 const prisma = new PrismaClient();
 
@@ -119,6 +120,10 @@ export async function completeTodo(userId: string, todoId: string): Promise<bool
     where: { id: todoId, userId, done: false },
     data: { done: true, doneAt: new Date() },
   });
+
+  if (result.count > 0) {
+    await updateStreak(userId);
+  }
 
   return result.count > 0;
 }

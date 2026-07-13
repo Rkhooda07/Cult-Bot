@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { updateStreak } from "./streakService";
 
 const prisma = new PrismaClient();
 
@@ -68,6 +69,8 @@ export async function completeSession(sessionId: string, userId: string): Promis
   });
 
   if (session.count === 0) return null;
+
+  await updateStreak(userId);
 
   const updated = await prisma.pomodoroSession.findUnique({ where: { id: sessionId } });
   if (!updated) return null;
