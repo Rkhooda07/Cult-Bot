@@ -42,6 +42,8 @@ import "./commands/habits/habit";
 // Phase 4: integrations
 import "./commands/link/link";
 import "./commands/dev-stats/devStats";
+// Phase 5: coach
+import "./commands/coach/coach";
 // (add more as phases are built)
 
 // ---------------------------------------------------------------------------

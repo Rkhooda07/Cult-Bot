@@ -28,6 +28,7 @@ model User {
   leetcodeLink     LeetCodeLink?
   codeforcesLink   CodeforcesLink?
   challengeEntries ChallengeParticipant[]
+  coachCache       CoachCache?
 }
 
 model Todo {
@@ -197,4 +198,16 @@ model ChallengeParticipant {
   joinedAt    DateTime           @default(now())
 
   @@unique([challengeId, userId])
+}
+
+model CoachCache {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  response  String
+  dataHash  String   // Hash of underlying data to detect changes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
