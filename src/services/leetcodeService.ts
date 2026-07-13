@@ -157,3 +157,55 @@ export async function fetchSolvedCount(
 
   return { totalSolved, newSolves };
 }
+
+/**
+ * Count distinct problems this user has accepted today (UTC) via the recent
+ * accepted-submission list — used by /dev-stats for a live "today" figure.
+ * Returns null on API error / unknown user so /dev-stats can render a
+ * placeholder. Note: LeetCode caps this list (~20 recent), so on an
+ * extraordinarily active day this is a floor, not an exact total.
+ */
+export async function getSolvesToday(username: string): Promise<number | null> {
+  const query = `
+    query recentAcSubmissions($username: String!) {
+      recentAcSubmissionList(username: $username, limit: 20) {
+        titleSlug
+        timestamp
+      }
+    }`;
+
+  const startOfUtcDay = new Date();
+  startOfUtcDay.setUTCHours(0, 0, 0, 0);
+  const sinceSec = Math.floor(startOfUtcDay.getTime() / 1000);
+
+  let payload: any;
+  try {
+    const res = await fetch("https://leetcode.com/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "User-Agent": "DevOS-Bot",
+        Referer: "https://leetcode.com",
+      },
+      body: JSON.stringify({ query, variables: { username } }),
+    });
+    if (!res.ok) return null;
+    payload = await res.json();
+  } catch (err) {
+    logger.error({ err, username }, "leetcodeService: failed to fetch recent submissions");
+    return null;
+  }
+
+  const list = payload?.data?.recentAcSubmissionList;
+  if (!Array.isArray(list)) return null;
+
+  const slugsToday = new Set<string>();
+  for (const s of list) {
+    const ts = Number(s?.timestamp);
+    if (!Number.isFinite(ts) || ts < sinceSec) continue;
+    if (s?.titleSlug) slugsToday.add(s.titleSlug);
+  }
+
+  return slugsToday.size;
+}

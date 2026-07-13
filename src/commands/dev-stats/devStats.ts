@@ -1,0 +1,131 @@
+import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { commands } from "../../registry";
+import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
+import { logger } from "../../utils/logger";
+import { prisma } from "../../database/prisma";
+import { ensureUser } from "../../services/reminderService";
+import { getCommitsToday } from "../../services/githubService";
+import { getSolvesToday as getLeetcodeSolvesToday } from "../../services/leetcodeService";
+import { fetchSolvedToday as getCodeforcesSolvesToday } from "../../services/codeforcesService";
+
+/**
+ * /dev-stats — combined dev-activity dashboard (spec Section 7, Phase 4).
+ *
+ * Shows today's (UTC) GitHub commits, LeetCode solves, and Codeforces solves.
+ * Renders correctly for any number of linked integrations:
+ *   - 0 linked → a friendly "link something" prompt.
+ *   - 1/2/3 linked → one field per linked source; unlinked sources are listed
+ *     compactly with a hint so the panel is self-documenting.
+ *
+ * Live figures are fetched on demand (ephemeral), so a source whose API call
+ * fails renders "couldn't fetch" rather than breaking the whole embed.
+ */
+
+/** Formats a live "today" count, tolerating a failed (null) fetch. */
+function todayLine(count: number | null, noun: string): string {
+  if (count === null) return "⚠️ couldn't fetch right now";
+  const plural = count === 1 ? noun : `${noun}s`;
+  return `**${count}** ${plural} today`;
+}
+
+commands.set("dev-stats", {
+  data: new SlashCommandBuilder()
+    .setName("dev-stats")
+    .setDescription("Your combined dev activity today across GitHub, LeetCode, and Codeforces"),
+
+  execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      await ensureUser(interaction.user.id, interaction.user.username);
+
+      const user = await prisma.user.findUnique({
+        where: { id: interaction.user.id },
+        include: { githubLink: true, leetcodeLink: true, codeforcesLink: true },
+      });
+
+      const github = user?.githubLink ?? null;
+      const leetcode = user?.leetcodeLink ?? null;
+      const codeforces = user?.codeforcesLink ?? null;
+
+      const linkedCount = [github, leetcode, codeforces].filter(Boolean).length;
+
+      // Case: 0 linked — nothing to show, guide them to /link.
+      if (linkedCount === 0) {
+        await interaction.editReply({
+          embeds: [
+            createEmbed("stats")
+              .setTitle("📈 Dev Stats")
+              .setDescription(
+                "You haven't linked any dev accounts yet.\n\nUse `/link github`, `/link leetcode`, or `/link codeforces` to start earning XP for your coding activity — and to see it summarized here."
+              ),
+          ],
+        });
+        return;
+      }
+
+      // Fetch today's figures only for the linked sources, in parallel.
+      const [commitsToday, lcSolvesToday, cfSolvesToday] = await Promise.all([
+        github ? getCommitsToday(github.username) : Promise.resolve<null>(null),
+        leetcode ? getLeetcodeSolvesToday(leetcode.username) : Promise.resolve<null>(null),
+        codeforces ? getCodeforcesSolvesToday(codeforces.handle) : Promise.resolve<null>(null),
+      ]);
+
+      const embed = createEmbed("stats")
+        .setTitle("📈 Dev Stats — Today")
+        .setThumbnail(interaction.user.displayAvatarURL());
+
+      // ── GitHub ────────────────────────────────────────────────────────────
+      if (github) {
+        embed.addFields({
+          name: "📝 GitHub",
+          value: `${todayLine(commitsToday, "commit")}\n[@${github.username}](https://github.com/${github.username})`,
+          inline: true,
+        });
+      }
+
+      // ── LeetCode ──────────────────────────────────────────────────────────
+      if (leetcode) {
+        embed.addFields({
+          name: "🧩 LeetCode",
+          value: `${todayLine(lcSolvesToday, "solve")}\n[@${leetcode.username}](https://leetcode.com/u/${leetcode.username}/)`,
+          inline: true,
+        });
+      }
+
+      // ── Codeforces ────────────────────────────────────────────────────────
+      if (codeforces) {
+        const ratingStr =
+          codeforces.lastRating !== null && codeforces.lastRating !== undefined
+            ? `rating **${codeforces.lastRating}**`
+            : "unrated";
+        embed.addFields({
+          name: "⚔️ Codeforces",
+          value: `${todayLine(cfSolvesToday, "solve")}\n[@${codeforces.handle}](https://codeforces.com/profile/${codeforces.handle}) · ${ratingStr}`,
+          inline: true,
+        });
+      }
+
+      // List any not-yet-linked sources so the panel is self-documenting
+      // (only when at least one — but not all — are linked).
+      const missing: string[] = [];
+      if (!github) missing.push("`/link github`");
+      if (!leetcode) missing.push("`/link leetcode`");
+      if (!codeforces) missing.push("`/link codeforces`");
+      if (missing.length > 0) {
+        embed.addFields({
+          name: "➕ Link more",
+          value: missing.join(" · "),
+          inline: false,
+        });
+      }
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (err) {
+      logger.error({ err, userId: interaction.user.id }, "Failed to render /dev-stats");
+      await interaction.editReply({
+        embeds: [createErrorEmbed("Couldn't load your dev stats right now. Please try again.")],
+      });
+    }
+  },
+});

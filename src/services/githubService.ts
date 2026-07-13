@@ -181,3 +181,48 @@ export async function fetchNewCommits(
 
   return { latestSha, newCommits, latestRepo };
 }
+
+/**
+ * Count commits pushed today (UTC) from a user's public PushEvents — used by
+ * /dev-stats for a live "today" figure (not the XP-capped number). Returns null
+ * on API error so /dev-stats can render a graceful placeholder.
+ */
+export async function getCommitsToday(username: string): Promise<number | null> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "DevOS-Bot",
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+  if (env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+  }
+
+  const startOfUtcDay = new Date();
+  startOfUtcDay.setUTCHours(0, 0, 0, 0);
+  const sinceMs = startOfUtcDay.getTime();
+
+  let events: unknown;
+  try {
+    const res = await fetch(
+      `https://api.github.com/users/${encodeURIComponent(username)}/events/public?per_page=100`,
+      { headers }
+    );
+    if (!res.ok) return null;
+    events = await res.json();
+  } catch (err) {
+    logger.error({ err, username }, "githubService: failed to fetch events for getCommitsToday");
+    return null;
+  }
+
+  if (!Array.isArray(events)) return null;
+
+  let count = 0;
+  for (const ev of events) {
+    if (!ev || (ev as any).type !== "PushEvent") continue;
+    const createdAt = (ev as any).created_at;
+    if (!createdAt || new Date(createdAt).getTime() < sinceMs) continue;
+    count += ((ev as any).payload?.commits ?? []).length;
+  }
+
+  return count;
+}

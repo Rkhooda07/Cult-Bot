@@ -20,6 +20,7 @@ import "./commands/badges/badges";
 import "./commands/habits/habit";
 // Phase 4: integrations
 import "./commands/link/link";
+import "./commands/dev-stats/devStats";
 
 async function main() {
   const client = new Client({
@@ -57,6 +58,10 @@ async function main() {
   // Start LeetCode activity poller (runs every 15 min)
   const { startLeetcodePoller } = await import("./cron/leetcodePoller");
   startLeetcodePoller(client);
+
+  // Start Codeforces activity poller (runs every 15 min)
+  const { startCodeforcesPoller } = await import("./cron/codeforcesPoller");
+  startCodeforcesPoller(client);
 
   await client.login(env.DISCORD_TOKEN);
 }

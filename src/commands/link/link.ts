@@ -10,14 +10,20 @@ import {
   fetchSolvedCount,
   updateLastSolvedCount,
 } from "../../services/leetcodeService";
+import {
+  linkCodeforces,
+  codeforcesHandleSchema,
+  fetchHandleInfo,
+  updateLastRating,
+} from "../../services/codeforcesService";
 
 /**
  * /link — connect external dev accounts (spec Section 7, Phase 4).
  *
- * One command per domain: `github` is the first integration subcommand here;
- * `leetcode` and `codeforces` are added by Prompts 14-15 alongside their pollers.
- * Linked accounts are polled every 15 min; new activity awards XP and (per
- * Section 12) can broadcast to configured guild channels.
+ * One command per domain (a single `/link` entry point with per-source
+ * subcommands: github, leetcode, codeforces). Linked accounts are polled every
+ * 15 min; new activity awards XP and (per Section 12) can broadcast to
+ * configured guild channels via the shared broadcastService.
  */
 commands.set("link", {
   data: new SlashCommandBuilder()
@@ -42,6 +48,17 @@ commands.set("link", {
           opt
             .setName("username")
             .setDescription("Your LeetCode username")
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("codeforces")
+        .setDescription("Link your Codeforces account — new solves award XP automatically")
+        .addStringOption((opt) =>
+          opt
+            .setName("handle")
+            .setDescription("Your Codeforces handle")
             .setRequired(true)
         )
     ) as unknown as SlashCommandBuilder,
@@ -139,6 +156,69 @@ commands.set("link", {
         logger.error({ err, userId: interaction.user.id }, "Failed to link LeetCode account");
         await interaction.editReply({
           embeds: [createErrorEmbed("Failed to link your LeetCode account. Please try again.")],
+        });
+      }
+      return;
+    }
+
+    if (subcommand === "codeforces") {
+      const input = interaction.options.getString("handle", true);
+      const parsed = codeforcesHandleSchema.safeParse(input);
+
+      if (!parsed.success) {
+        await interaction.reply({
+          embeds: [createErrorEmbed("That doesn't look like a valid Codeforces handle.")],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const handle = parsed.data;
+
+      // The CF API round-trip can be slow; defer so we don't hit the 3s limit.
+      await interaction.deferReply({ ephemeral: true });
+
+      try {
+        await ensureUser(interaction.user.id, interaction.user.username);
+
+        // Verify the handle exists before persisting anything. `found === false`
+        // means CF explicitly reported no such handle; `null` means we couldn't
+        // check (transient) — in that case we link optimistically rather than
+        // block the user on a hiccup.
+        const info = await fetchHandleInfo(handle);
+        if (info.found === false) {
+          await interaction.editReply({
+            embeds: [
+              createErrorEmbed(
+                `Couldn't find a Codeforces user with the handle **${handle}**. Double-check the spelling.`
+              ),
+            ],
+          });
+          return;
+        }
+
+        await linkCodeforces(interaction.user.id, handle);
+        // Baseline the rating so a later rating change is detected against a real
+        // starting point rather than the schema default (null).
+        await updateLastRating(interaction.user.id, info.rating);
+
+        const rating = info.rating;
+        const ratingLine =
+          rating !== null ? ` (current rating **${rating}**)` : " (currently unrated)";
+
+        await interaction.editReply({
+          embeds: [
+            createEmbed("stats")
+              .setTitle("🔗 Codeforces Linked")
+              .setDescription(
+                `Linked to [**${handle}**](https://codeforces.com/profile/${handle})${ratingLine}.\n\nNew accepted solves will award **+30 XP** each (up to 5/day) and — if a server you're in has an announce channel set — get celebrated there automatically. Polls run every 15 minutes.`
+              ),
+          ],
+        });
+      } catch (err) {
+        logger.error({ err, userId: interaction.user.id }, "Failed to link Codeforces account");
+        await interaction.editReply({
+          embeds: [createErrorEmbed("Failed to link your Codeforces account. Please try again.")],
         });
       }
       return;
