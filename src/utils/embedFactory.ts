@@ -5,9 +5,11 @@ import { EmbedBuilder } from "discord.js";
  * All values are 24-bit integers (0xRRGGBB), which EmbedBuilder.setColor() accepts.
  */
 export const COLORS = {
-  todo: 0x5865f2, // Discord blurple
+  todo: 0x5865f2,
   goals: 0x9b59b6,
   reminders: 0xe67e22,
+  remind: 0xe67e22,
+  settings: 0x7289da,
   focus: 0xe74c3c,
   streaks: 0xff6b35,
   stats: 0x2ecc71,

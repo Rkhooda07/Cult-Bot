@@ -28,9 +28,9 @@ import { commands } from "./registry";
 import "./commands/ping/ping";
 import "./commands/todo/todo";
 import "./commands/goal/goal";
-// Phase 1+: import "./commands/remind/remind";
+import "./commands/reminders/remind";
+import "./commands/settings/settings";
 // Phase 1+: import "./commands/today/today";
-// Phase 1+: import "./commands/settings/settings";
 // (add more as phases are built)
 
 // ---------------------------------------------------------------------------

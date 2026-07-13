@@ -6,9 +6,9 @@ import { logger } from "./utils/logger";
 import "./commands/ping/ping";
 import "./commands/todo/todo";
 import "./commands/goal/goal";
-// Phase 1+: import "./commands/remind/remind";
+import "./commands/reminders/remind";
+import "./commands/settings/settings";
 // Phase 1+: import "./commands/today/today";
-// Phase 1+: import "./commands/settings/settings";
 
 async function main() {
   const client = new Client({
@@ -28,6 +28,10 @@ async function main() {
 
   registerReadyEvent(client);
   registerInteractionCreate(client);
+
+  // Start reminder poller (runs every 60s)
+  const { startReminderPoller } = await import("./cron/reminderPoller");
+  startReminderPoller(client);
 
   await client.login(env.DISCORD_TOKEN);
 }
