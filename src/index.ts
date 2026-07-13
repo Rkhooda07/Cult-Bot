@@ -18,6 +18,8 @@ import "./commands/stats/stats";
 import "./commands/level/level";
 import "./commands/badges/badges";
 import "./commands/habits/habit";
+// Phase 4: integrations
+import "./commands/link/link";
 
 async function main() {
   const client = new Client({
@@ -47,6 +49,10 @@ async function main() {
   // Start streak check cron job (runs every hour)
   const { startStreakCheck } = await import("./cron/streakCheck");
   startStreakCheck(client);
+
+  // Start GitHub activity poller (runs every 15 min)
+  const { startGithubPoller } = await import("./cron/githubPoller");
+  startGithubPoller(client);
 
   await client.login(env.DISCORD_TOKEN);
 }

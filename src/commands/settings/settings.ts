@@ -5,6 +5,8 @@ import {
   ActionRowBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
+  ChannelType,
+  PermissionFlagsBits,
 } from "discord.js";
 import { commands, selectHandlers } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
@@ -67,10 +69,111 @@ commands.set("settings", {
             .setRequired(true)
             .setAutocomplete(true)
         )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("broadcast")
+        .setDescription("Turn dev-activity broadcasts (commits, solves) on or off for you")
+        .addStringOption((opt) =>
+          opt
+            .setName("state")
+            .setDescription("Whether your activity may be announced in servers you share with the bot")
+            .setRequired(true)
+            .addChoices({ name: "on", value: "on" }, { name: "off", value: "off" })
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("announce-channel")
+        .setDescription("Set the channel where members' dev activity is announced (requires Manage Server)")
+        .addChannelOption((opt) =>
+          opt
+            .setName("channel")
+            .setDescription("The text channel to post activity broadcasts to")
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+            .setRequired(true)
+        )
     ) as unknown as SlashCommandBuilder,
 
   execute: async (interaction: ChatInputCommandInteraction) => {
     const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "broadcast") {
+      const state = interaction.options.getString("state", true);
+      const enabled = state === "on";
+
+      await ensureUser(interaction.user.id, interaction.user.username);
+
+      try {
+        await prisma.user.update({
+          where: { id: interaction.user.id },
+          data: { broadcastEnabled: enabled },
+        });
+      } catch (err) {
+        logger.error({ err, userId: interaction.user.id }, "Failed to update broadcastEnabled");
+        await interaction.reply({ embeds: [createErrorEmbed("Failed to update broadcast setting.")], ephemeral: true });
+        return;
+      }
+
+      const desc = enabled
+        ? "Your dev activity (commits, LeetCode solves, Codeforces submissions) **will** be announced in servers you share with the bot that have an announce channel configured."
+        : "Your dev activity **will not** be announced in any server. You'll still earn XP as normal.";
+
+      await interaction.reply({
+        embeds: [
+          createEmbed("settings")
+            .setTitle(enabled ? "📣 Broadcasts On" : "🔕 Broadcasts Off")
+            .setDescription(desc),
+        ],
+        ephemeral: true,
+      });
+      return;
+    }
+
+    if (subcommand === "announce-channel") {
+      // Guild-only + Manage Server permission (spec Section 5, Section 10).
+      if (!interaction.inGuild()) {
+        await interaction.reply({
+          embeds: [createErrorEmbed("This command can only be used inside a server.")],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+        await interaction.reply({
+          embeds: [createErrorEmbed("You need the **Manage Server** permission to set the announce channel.")],
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const channel = interaction.options.getChannel("channel", true);
+
+      try {
+        await prisma.guildSettings.upsert({
+          where: { id: interaction.guildId! },
+          update: { announceChannelId: channel.id },
+          create: { id: interaction.guildId!, announceChannelId: channel.id },
+        });
+      } catch (err) {
+        logger.error({ err, guildId: interaction.guildId }, "Failed to set announce channel");
+        await interaction.reply({ embeds: [createErrorEmbed("Failed to set the announce channel.")], ephemeral: true });
+        return;
+      }
+
+      await interaction.reply({
+        embeds: [
+          createEmbed("settings")
+            .setTitle("✅ Announce Channel Set")
+            .setDescription(
+              `Dev activity from linked members will now be announced in <#${channel.id}>.\n\nMembers can opt out individually with \`/settings broadcast off\`.`
+            ),
+        ],
+        ephemeral: true,
+      });
+      return;
+    }
 
     if (subcommand === "timezone") {
       const input = interaction.options.getString("timezone", true);

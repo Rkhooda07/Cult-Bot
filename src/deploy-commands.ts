@@ -39,6 +39,8 @@ import "./commands/stats/stats";
 import "./commands/level/level";
 import "./commands/badges/badges";
 import "./commands/habits/habit";
+// Phase 4: integrations
+import "./commands/link/link";
 // (add more as phases are built)
 
 // ---------------------------------------------------------------------------
