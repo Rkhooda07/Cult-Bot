@@ -17,6 +17,7 @@ import "./commands/streak/streak";
 import "./commands/stats/stats";
 import "./commands/level/level";
 import "./commands/badges/badges";
+import "./commands/habits/habit";
 
 async function main() {
   const client = new Client({
