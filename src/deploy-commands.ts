@@ -46,6 +46,7 @@ import "./commands/dev-stats/devStats";
 import "./commands/coach/coach";
 import "./commands/leaderboard/leaderboard";
 import "./commands/challenge/challenge";
+import "./commands/board/board";
 // (add more as phases are built)
 
 // ---------------------------------------------------------------------------

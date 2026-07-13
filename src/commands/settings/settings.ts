@@ -94,11 +94,54 @@ commands.set("settings", {
             .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
             .setRequired(true)
         )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("board")
+        .setDescription("Include/exclude yourself on the team visibility board (/board)")
+        .addStringOption((opt) =>
+          opt
+            .setName("state")
+            .setDescription("Whether you appear on the team checklist board")
+            .setRequired(true)
+            .addChoices({ name: "on", value: "on" }, { name: "off", value: "off" })
+        )
     ) as unknown as SlashCommandBuilder,
 
   execute: async (interaction: ChatInputCommandInteraction) => {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const subcommand = interaction.options.getSubcommand();
+
+    if (subcommand === "board") {
+      const state = interaction.options.getString("state", true);
+      const visible = state === "on";
+
+      await ensureUser(interaction.user.id, interaction.user.username);
+
+      try {
+        await prisma.user.update({
+          where: { id: interaction.user.id },
+          data: { boardVisible: visible },
+        });
+      } catch (err) {
+        logger.error({ err, userId: interaction.user.id }, "Failed to update boardVisible");
+        await interaction.editReply({ embeds: [createErrorEmbed("Failed to update board visibility setting.")] });
+        return;
+      }
+
+      const desc = visible
+        ? "You **will** be included on the server checklist board (`/board`) with your todo completion stats."
+        : "You **will not** be shown on the server checklist board (`/board`). Your task counts and completion rates are hidden from the team.";
+
+      await interaction.editReply({
+        embeds: [
+          createEmbed("settings")
+            .setTitle(visible ? "📋 Board Visibility On" : "🔒 Board Visibility Off")
+            .setDescription(desc),
+        ],
+      });
+      return;
+    }
 
     if (subcommand === "broadcast") {
       const state = interaction.options.getString("state", true);

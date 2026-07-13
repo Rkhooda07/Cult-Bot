@@ -30,6 +30,7 @@ export async function assertOwner(
 ): Promise<boolean> {
   const { ownerId } = decode(interaction.customId);
 
+  if (ownerId === "public") return true;
   if (interaction.user.id === ownerId) return true;
 
   await interaction.reply({

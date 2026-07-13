@@ -14,6 +14,7 @@ model User {
   xp               Int      @default(0)
   level            Int      @default(1)
   broadcastEnabled Boolean  @default(true)
+  boardVisible     Boolean  @default(true)
   createdAt        DateTime @default(now())
 
   todos            Todo[]
