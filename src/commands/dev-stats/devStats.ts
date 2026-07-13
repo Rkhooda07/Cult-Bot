@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
@@ -34,7 +34,7 @@ commands.set("dev-stats", {
     .setDescription("Your combined dev activity today across GitHub, LeetCode, and Codeforces"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
       await ensureUser(interaction.user.id, interaction.user.username);

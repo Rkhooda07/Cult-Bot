@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
 import { progressBar } from "../../utils/progressBar";
@@ -11,6 +11,8 @@ commands.set("level", {
     .setDescription("View your current level and XP progress bar"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const userId = interaction.user.id;
     const username = interaction.user.username;
 
@@ -49,6 +51,6 @@ commands.set("level", {
       .setThumbnail(interaction.user.displayAvatarURL())
       .setFooter({ text: `DevOS • ${username}` });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
   },
 });

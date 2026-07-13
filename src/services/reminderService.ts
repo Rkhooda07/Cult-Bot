@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import * as chrono from "chrono-node";
 import { DateTime } from "luxon";
 import { z } from "zod";
-
-const prisma = new PrismaClient();
+import { prisma } from "../database/prisma";
 
 export const reminderMessageSchema = z.string().min(1).max(200).trim();
 export const reminderTimeSchema = z.string().min(1).max(100).trim();

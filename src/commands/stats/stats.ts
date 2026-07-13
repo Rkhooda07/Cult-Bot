@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
 import { getTodoStats } from "../../services/todoService";
@@ -13,6 +13,8 @@ commands.set("stats", {
     .setDescription("View your overall productivity stats and Productivity Score"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const userId = interaction.user.id;
     const username = interaction.user.username;
 
@@ -95,6 +97,6 @@ commands.set("stats", {
       )
       .setFooter({ text: `DevOS • ${interaction.user.username}` });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
   },
 });

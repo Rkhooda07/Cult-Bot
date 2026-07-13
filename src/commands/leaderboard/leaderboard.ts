@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
@@ -24,13 +24,13 @@ commands.set("leaderboard", {
     if (!guildId) {
       await interaction.reply({
         embeds: [createErrorEmbed("This command can only be used in a server.")],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const scope = (interaction.options.getString("scope") as "weekly" | "alltime") || "alltime";
-    await interaction.deferReply({ ephemeral: false });
+    await interaction.deferReply();
 
     try {
       const entries = await getLeaderboard(guildId, scope);

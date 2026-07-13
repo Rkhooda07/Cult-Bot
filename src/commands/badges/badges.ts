@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
 import { prisma } from "../../database/prisma";
@@ -9,6 +9,8 @@ commands.set("badges", {
     .setDescription("View your earned and locked productivity badges"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const userId = interaction.user.id;
     const username = interaction.user.username;
 
@@ -55,6 +57,6 @@ commands.set("badges", {
       });
     }
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
   },
 });

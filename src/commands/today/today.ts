@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, User } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, User, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
 import { getTodaysOpenTodos } from "../../services/todoService";
@@ -13,6 +13,7 @@ commands.set("today", {
     .setDescription("Show today's overview: open todos, reminders, and goal progress"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     await executeToday(interaction);
   },
 });
@@ -29,7 +30,7 @@ async function executeToday(interaction: ChatInputCommandInteraction): Promise<v
   ]);
 
   const embed = createTodayEmbed(interaction.user, timezone, openTodos, reminderCount, avgProgress, inProgressGoals);
-  await interaction.reply({ embeds: [embed], ephemeral: true });
+  await interaction.editReply({ embeds: [embed] });
 }
 
 function createTodayEmbed(

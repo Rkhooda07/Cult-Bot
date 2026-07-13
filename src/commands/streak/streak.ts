@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
 import { getStreak } from "../../services/streakService";
@@ -10,6 +10,8 @@ commands.set("streak", {
     .setDescription("View your current and best productivity streaks"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const userId = interaction.user.id;
     const username = interaction.user.username;
 
@@ -27,6 +29,6 @@ commands.set("streak", {
       )
       .setFooter({ text: `DevOS • ${interaction.user.username}` });
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
   },
 });

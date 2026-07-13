@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
@@ -10,7 +10,7 @@ commands.set("coach", {
     .setDescription("Get your AI productivity coach note (cached 24h)"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
       const userId = interaction.user.id;

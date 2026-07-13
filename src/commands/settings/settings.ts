@@ -7,6 +7,7 @@ import {
   StringSelectMenuOptionBuilder,
   ChannelType,
   PermissionFlagsBits,
+  MessageFlags,
 } from "discord.js";
 import { commands, selectHandlers } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
@@ -96,6 +97,7 @@ commands.set("settings", {
     ) as unknown as SlashCommandBuilder,
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const subcommand = interaction.options.getSubcommand();
 
     if (subcommand === "broadcast") {
@@ -111,7 +113,7 @@ commands.set("settings", {
         });
       } catch (err) {
         logger.error({ err, userId: interaction.user.id }, "Failed to update broadcastEnabled");
-        await interaction.reply({ embeds: [createErrorEmbed("Failed to update broadcast setting.")], ephemeral: true });
+        await interaction.editReply({ embeds: [createErrorEmbed("Failed to update broadcast setting.")] });
         return;
       }
 
@@ -119,13 +121,12 @@ commands.set("settings", {
         ? "Your dev activity (commits, LeetCode solves, Codeforces submissions) **will** be announced in servers you share with the bot that have an announce channel configured."
         : "Your dev activity **will not** be announced in any server. You'll still earn XP as normal.";
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           createEmbed("settings")
             .setTitle(enabled ? "📣 Broadcasts On" : "🔕 Broadcasts Off")
             .setDescription(desc),
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -133,17 +134,15 @@ commands.set("settings", {
     if (subcommand === "announce-channel") {
       // Guild-only + Manage Server permission (spec Section 5, Section 10).
       if (!interaction.inGuild()) {
-        await interaction.reply({
+        await interaction.editReply({
           embeds: [createErrorEmbed("This command can only be used inside a server.")],
-          ephemeral: true,
         });
         return;
       }
 
       if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-        await interaction.reply({
+        await interaction.editReply({
           embeds: [createErrorEmbed("You need the **Manage Server** permission to set the announce channel.")],
-          ephemeral: true,
         });
         return;
       }
@@ -158,11 +157,11 @@ commands.set("settings", {
         });
       } catch (err) {
         logger.error({ err, guildId: interaction.guildId }, "Failed to set announce channel");
-        await interaction.reply({ embeds: [createErrorEmbed("Failed to set the announce channel.")], ephemeral: true });
+        await interaction.editReply({ embeds: [createErrorEmbed("Failed to set the announce channel.")] });
         return;
       }
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           createEmbed("settings")
             .setTitle("✅ Announce Channel Set")
@@ -170,7 +169,6 @@ commands.set("settings", {
               `Dev activity from linked members will now be announced in <#${channel.id}>.\n\nMembers can opt out individually with \`/settings broadcast off\`.`
             ),
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -180,16 +178,15 @@ commands.set("settings", {
       const result = timezoneSchema.safeParse(input);
 
       if (!result.success) {
-        await interaction.reply({ embeds: [createErrorEmbed("Invalid timezone format.")], ephemeral: true });
+        await interaction.editReply({ embeds: [createErrorEmbed("Invalid timezone format.")] });
         return;
       }
 
       const tz = result.data;
 
       if (!isValidIANATimezone(tz)) {
-        await interaction.reply({
+        await interaction.editReply({
           embeds: [createErrorEmbed(`Invalid timezone: **${tz}**. Use an IANA timezone like \`America/New_York\` or \`Europe/London\`.`)],
-          ephemeral: true,
         });
         return;
       }
@@ -199,12 +196,11 @@ commands.set("settings", {
       const success = await setUserTimezone(interaction.user.id, tz);
 
       if (success) {
-        await interaction.reply({
+        await interaction.editReply({
           embeds: [createEmbed("settings").setTitle("✅ Timezone Updated").setDescription(`Your timezone is now **${tz}**.`)],
-          ephemeral: true,
         });
       } else {
-        await interaction.reply({ embeds: [createErrorEmbed("Failed to update timezone.")], ephemeral: true });
+        await interaction.editReply({ embeds: [createErrorEmbed("Failed to update timezone.")] });
       }
       return;
     }
@@ -220,18 +216,18 @@ commands.set("timezone", {
     ) as unknown as SlashCommandBuilder,
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const tz = interaction.options.getString("timezone", true);
     const result = timezoneSchema.safeParse(tz);
 
     if (!result.success) {
-      await interaction.reply({ embeds: [createErrorEmbed("Invalid timezone format.")], ephemeral: true });
+      await interaction.editReply({ embeds: [createErrorEmbed("Invalid timezone format.")] });
       return;
     }
 
     if (!isValidIANATimezone(tz)) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [createErrorEmbed(`Invalid timezone: **${tz}**. Use an IANA timezone like \`America/New_York\` or \`Europe/London\`.`)],
-        ephemeral: true,
       });
       return;
     }
@@ -240,12 +236,11 @@ commands.set("timezone", {
     const success = await setUserTimezone(interaction.user.id, tz);
 
     if (success) {
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [createEmbed("settings").setTitle("✅ Timezone Updated").setDescription(`Your timezone is now **${tz}**.`)],
-        ephemeral: true,
       });
     } else {
-      await interaction.reply({ embeds: [createErrorEmbed("Failed to update timezone.")], ephemeral: true });
+      await interaction.editReply({ embeds: [createErrorEmbed("Failed to update timezone.")] });
     }
   },
 });

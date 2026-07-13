@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js";
 import { commands, buttonHandlers } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
 import { encode } from "../../utils/customId";
@@ -21,6 +21,7 @@ commands.set("focus", {
     .addSubcommand((sub) => sub.setName("stop").setDescription("Stop the current focus session")) as unknown as SlashCommandBuilder,
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const subcommand = interaction.options.getSubcommand();
     if (subcommand === "start") {
       await handleFocusStart(interaction);
@@ -40,7 +41,7 @@ async function handleFocusStart(interaction: ChatInputCommandInteraction): Promi
   const existing = await getActiveSession(userId);
   if (existing) {
     const embed = createEmbed("error").setTitle("Session in progress").setDescription(`You already have a focus session running (started <t:${Math.floor(existing.startedAt.getTime() / 1000)}:R>). Use \`/focus stop\` to end it.`);
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
     return;
   }
 
@@ -48,7 +49,7 @@ async function handleFocusStart(interaction: ChatInputCommandInteraction): Promi
   const embed = buildSessionEmbed(interaction.user, session, minutes);
   const row = buildCompleteButton(userId, session.id);
 
-  await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+  await interaction.editReply({ embeds: [embed], components: [row] });
 }
 
 async function handleFocusStop(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -57,21 +58,21 @@ async function handleFocusStop(interaction: ChatInputCommandInteraction): Promis
   const active = await getActiveSession(userId);
   if (!active) {
     const embed = createEmbed("error").setTitle("No active session").setDescription("You don't have a focus session running.");
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
     return;
   }
 
   const abandoned = await abandonSession(userId, active.id);
   if (!abandoned) {
     const embed = createEmbed("error").setTitle("Failed to stop").setDescription("Could not stop the session (already completed?).");
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
     return;
   }
 
   const embed = createEmbed("focus")
     .setTitle("⏹ Focus Session Stopped")
     .setDescription(`Session abandoned after <t:${Math.floor(active.startedAt.getTime() / 1000)}:R>. No XP awarded.`);
-  await interaction.reply({ embeds: [embed], ephemeral: true });
+  await interaction.editReply({ embeds: [embed] });
 }
 
 function buildSessionEmbed(user: { username: string; displayAvatarURL: () => string }, session: { id: string; durationMin: number; startedAt: Date }, minutes: number): EmbedBuilder {
@@ -126,7 +127,7 @@ buttonHandlers.set("focus:complete", async (interaction) => {
       .setDescription(`Congratulations, **${interaction.user.username}**! You've leveled up to **Level ${xpResult.newLevel}**!\nKeep up the great work! 🚀`)
       .setThumbnail(interaction.user.displayAvatarURL());
 
-    await interaction.followUp({ embeds: [levelUpEmbed], ephemeral: true });
+    await interaction.followUp({ embeds: [levelUpEmbed], flags: MessageFlags.Ephemeral });
   }
 });
 

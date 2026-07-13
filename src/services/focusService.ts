@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { prisma } from "../database/prisma";
 import { updateStreak } from "./streakService";
-
-const prisma = new PrismaClient();
 
 export const focusDurationSchema = z.coerce.number().int().min(1).max(180).default(25);
 

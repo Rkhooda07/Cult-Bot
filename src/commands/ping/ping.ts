@@ -3,6 +3,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  MessageFlags,
 } from "discord.js";
 import { commands, buttonHandlers } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
@@ -38,7 +39,7 @@ commands.set("ping", {
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(testButton);
 
-    await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
   },
 });
 
@@ -60,5 +61,5 @@ buttonHandlers.set("ping:pong", async (interaction) => {
     )
     .setDescription("The global interaction router decoded the customId and dispatched this click to the correct handler.");
 
-  await interaction.reply({ embeds: [embed], ephemeral: true });
+  await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 });

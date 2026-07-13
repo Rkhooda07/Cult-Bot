@@ -13,6 +13,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
   EmbedBuilder,
+  MessageFlags,
 } from "discord.js";
 import { commands, buttonHandlers, selectHandlers, modalHandlers } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
@@ -46,14 +47,10 @@ async function renderPanel(
   const habits = await listHabits(userId);
   const { embed, components } = buildPanelEmbed(userId, username, habits);
 
-  if (interaction.isChatInputCommand()) {
-    await interaction.reply({ embeds: [embed], components, ephemeral: true });
+  if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({ embeds: [embed], components });
   } else {
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({ embeds: [embed], components });
-    } else {
-      await interaction.reply({ embeds: [embed], components, ephemeral: true });
-    }
+    await interaction.reply({ embeds: [embed], components, flags: MessageFlags.Ephemeral });
   }
 }
 
@@ -110,6 +107,7 @@ commands.set("habit", {
     .setDescription("Open your personal habit panel"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     await renderPanel(interaction);
   },
 });
@@ -143,7 +141,7 @@ modalHandlers.set("habit:addName", async (interaction: ModalSubmitInteraction) =
   if (!parsed.success) {
     await interaction.reply({
       embeds: [createErrorEmbed("Habit name must be between 1 and 100 characters.")],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -176,7 +174,7 @@ modalHandlers.set("habit:addName", async (interaction: ModalSubmitInteraction) =
     .setTitle("🌱 Set Frequency")
     .setDescription(`How often do you want to track **${name}**?`);
 
-  await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+  await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
 });
 
 // ─── Select: habit:setFreq — Step 3 — Create the Habit row ──────────────────
@@ -206,7 +204,7 @@ buttonHandlers.set("habit:checkoff", async (interaction: ButtonInteraction) => {
   if (pending.length === 0) {
     await interaction.reply({
       embeds: [createErrorEmbed("All habits are already checked off for today! 🎉")],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -234,7 +232,7 @@ buttonHandlers.set("habit:checkoff", async (interaction: ButtonInteraction) => {
     );
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
-  await interaction.reply({ components: [row], ephemeral: true });
+  await interaction.reply({ components: [row], flags: MessageFlags.Ephemeral });
 });
 
 // ─── Select: habit:doCheckoff ────────────────────────────────────────────────
@@ -258,7 +256,7 @@ buttonHandlers.set("habit:delete", async (interaction: ButtonInteraction) => {
   if (habits.length === 0) {
     await interaction.reply({
       embeds: [createErrorEmbed("You have no habits to delete.")],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -281,7 +279,7 @@ buttonHandlers.set("habit:delete", async (interaction: ButtonInteraction) => {
       .setTitle("🗑️ Delete Habit")
       .setDescription(`Delete **${habits[0].name}**? This will remove all its logs too.`);
 
-    await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -302,7 +300,7 @@ buttonHandlers.set("habit:delete", async (interaction: ButtonInteraction) => {
     );
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
-  await interaction.reply({ components: [row], ephemeral: true });
+  await interaction.reply({ components: [row], flags: MessageFlags.Ephemeral });
 });
 
 // ─── Button: habit:confirmDelete ─────────────────────────────────────────────

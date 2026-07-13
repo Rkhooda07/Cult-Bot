@@ -67,6 +67,10 @@ async function main() {
   const { startCodeforcesPoller } = await import("./cron/codeforcesPoller");
   startCodeforcesPoller(client);
 
+  // Start Weekly Recap cron job (runs every hour)
+  const { startWeeklyRecap } = await import("./cron/weeklyRecap");
+  startWeeklyRecap(client);
+
   await client.login(env.DISCORD_TOKEN);
 }
 

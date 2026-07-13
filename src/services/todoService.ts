@@ -1,10 +1,8 @@
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { DateTime } from "luxon";
+import { prisma } from "../database/prisma";
 import { updateStreak } from "./streakService";
 import { award } from "./xpService";
-
-const prisma = new PrismaClient();
 
 export const todoContentSchema = z.string().min(1).max(200);
 

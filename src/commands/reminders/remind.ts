@@ -12,6 +12,7 @@ import {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
+  MessageFlags,
 } from "discord.js";
 import { commands, buttonHandlers, selectHandlers, modalHandlers } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
@@ -54,14 +55,10 @@ async function renderPanel(
   const { embed, components } = createReminderEmbed(username, data, timezone);
   const finalComponents = buildActionRowsWithUserId(userId, data);
 
-  if (interaction.isChatInputCommand()) {
-    await interaction.reply({ embeds: [embed], components: finalComponents, ephemeral: true });
+  if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({ embeds: [embed], components: finalComponents });
   } else {
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({ embeds: [embed], components: finalComponents });
-    } else {
-      await interaction.reply({ embeds: [embed], components: finalComponents, ephemeral: true });
-    }
+    await interaction.reply({ embeds: [embed], components: finalComponents, flags: MessageFlags.Ephemeral });
   }
 }
 
@@ -83,6 +80,7 @@ commands.set("remind", {
     .addSubcommand((sub) => sub.setName("list").setDescription("List your upcoming reminders")) as unknown as SlashCommandBuilder,
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const subcommand = interaction.options.getSubcommand();
 
     if (subcommand === "add") {
@@ -93,7 +91,7 @@ commands.set("remind", {
       const timeResult = remindTimeSchema.safeParse(timeInput);
 
       if (!messageResult.success || !timeResult.success) {
-        await interaction.reply({ embeds: [createErrorEmbed("Invalid input.")], ephemeral: true });
+        await interaction.editReply({ embeds: [createErrorEmbed("Invalid input.")] });
         return;
       }
 
@@ -107,7 +105,7 @@ commands.set("remind", {
       );
 
       if ("error" in result) {
-        await interaction.reply({ embeds: [createErrorEmbed(result.error)], ephemeral: true });
+        await interaction.editReply({ embeds: [createErrorEmbed(result.error)] });
         return;
       }
 
@@ -115,14 +113,13 @@ commands.set("remind", {
       const timezone = user?.timezone || "UTC";
       const timeStr = formatReminderTime(result.parsedTime, timezone);
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           createEmbed("reminders")
             .setTitle("⏰ Reminder Set")
             .setDescription(`I'll remind you: **${result.reminder.message}**`)
             .addFields({ name: "Time", value: timeStr, inline: true }),
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -143,7 +140,7 @@ buttonHandlers.set("remind:cancel", async (interaction: ButtonInteraction) => {
   const reminders = await getAllUpcomingReminders(interaction.user.id);
 
   if (reminders.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No upcoming reminders to cancel.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("No upcoming reminders to cancel.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -151,7 +148,7 @@ buttonHandlers.set("remind:cancel", async (interaction: ButtonInteraction) => {
   const timezone = user?.timezone || "UTC";
 
   const selectMenu = createCancelSelectMenu(interaction.user.id, reminders, timezone);
-  await interaction.reply({ components: [selectMenu], ephemeral: true });
+  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
 });
 
 buttonHandlers.set("remind:page", async (interaction: ButtonInteraction) => {
@@ -176,7 +173,7 @@ selectHandlers.set("remind:cancel", async (interaction: StringSelectMenuInteract
   if (cancelled > 0) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to cancel reminder(s).")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Failed to cancel reminder(s).")], flags: MessageFlags.Ephemeral });
   }
 });
 
@@ -193,7 +190,7 @@ modalHandlers.set("remind:add", async (interaction: ModalSubmitInteraction) => {
   const timeResult = remindTimeSchema.safeParse(timeInput);
 
   if (!messageResult.success || !timeResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Invalid input.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Invalid input.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -209,7 +206,7 @@ modalHandlers.set("remind:add", async (interaction: ModalSubmitInteraction) => {
   );
 
   if ("error" in result) {
-    await interaction.reply({ embeds: [createErrorEmbed(result.error)], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed(result.error)], flags: MessageFlags.Ephemeral });
     return;
   }
 

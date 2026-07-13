@@ -13,6 +13,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
   ComponentType,
+  MessageFlags,
 } from "discord.js";
 import { commands, buttonHandlers, selectHandlers, modalHandlers } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
@@ -54,14 +55,10 @@ async function renderPanel(
 
   const { embed, components } = createTodoEmbed(userId, username, data, stats);
 
-  if (interaction.isChatInputCommand()) {
-    await interaction.reply({ embeds: [embed], components, ephemeral: true });
+  if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({ embeds: [embed], components });
   } else {
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({ embeds: [embed], components });
-    } else {
-      await interaction.reply({ embeds: [embed], components, ephemeral: true });
-    }
+    await interaction.reply({ embeds: [embed], components, flags: MessageFlags.Ephemeral });
   }
 }
 
@@ -71,6 +68,7 @@ commands.set("todo", {
     .setDescription("Open your personal todo panel"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     await renderPanel(interaction, 1);
   },
 });
@@ -84,7 +82,7 @@ buttonHandlers.set("todo:edit", async (interaction: ButtonInteraction) => {
   const todos = await getAllTodos(interaction.user.id);
 
   if (todos.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No todos to edit.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("No todos to edit.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -110,14 +108,14 @@ buttonHandlers.set("todo:edit", async (interaction: ButtonInteraction) => {
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
-  await interaction.reply({ components: [row], ephemeral: true });
+  await interaction.reply({ components: [row], flags: MessageFlags.Ephemeral });
 });
 
 buttonHandlers.set("todo:delete", async (interaction: ButtonInteraction) => {
   const todos = await getAllTodos(interaction.user.id);
 
   if (todos.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No todos to delete.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("No todos to delete.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -138,7 +136,7 @@ buttonHandlers.set("todo:delete", async (interaction: ButtonInteraction) => {
     await interaction.reply({
       embeds: [createEmbed("todo").setTitle("🗑️ Delete Todo").setDescription(`Delete "${todos[0].content}"?`)],
       components: [confirmRow],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -159,14 +157,14 @@ buttonHandlers.set("todo:delete", async (interaction: ButtonInteraction) => {
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
-  await interaction.reply({ components: [row], ephemeral: true });
+  await interaction.reply({ components: [row], flags: MessageFlags.Ephemeral });
 });
 
 buttonHandlers.set("todo:complete", async (interaction: ButtonInteraction) => {
   const incompleteTodos = await getIncompleteTodos(interaction.user.id);
 
   if (incompleteTodos.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No incomplete todos to complete.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("No incomplete todos to complete.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -175,7 +173,7 @@ buttonHandlers.set("todo:complete", async (interaction: ButtonInteraction) => {
     if (success) {
       await renderPanel(interaction, 1);
     } else {
-      await interaction.reply({ embeds: [createErrorEmbed("Failed to complete todo.")], ephemeral: true });
+      await interaction.reply({ embeds: [createErrorEmbed("Failed to complete todo.")], flags: MessageFlags.Ephemeral });
     }
     return;
   }
@@ -196,7 +194,7 @@ buttonHandlers.set("todo:complete", async (interaction: ButtonInteraction) => {
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
-  await interaction.reply({ components: [row], ephemeral: true });
+  await interaction.reply({ components: [row], flags: MessageFlags.Ephemeral });
 });
 
 buttonHandlers.set("todo:page", async (interaction: ButtonInteraction) => {
@@ -214,7 +212,7 @@ buttonHandlers.set("todo:confirmDelete", async (interaction: ButtonInteraction) 
   if (success) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to delete todo.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Failed to delete todo.")], flags: MessageFlags.Ephemeral });
   }
 });
 
@@ -228,7 +226,7 @@ selectHandlers.set("todo:edit", async (interaction: StringSelectMenuInteraction)
   const todo = todos.find((t) => t.id === todoId);
 
   if (!todo) {
-    await interaction.reply({ embeds: [createErrorEmbed("Todo not found.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Todo not found.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -248,7 +246,7 @@ selectHandlers.set("todo:delete", async (interaction: StringSelectMenuInteractio
   if (deleted > 0) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to delete todo(s).")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Failed to delete todo(s).")], flags: MessageFlags.Ephemeral });
   }
 });
 
@@ -264,7 +262,7 @@ selectHandlers.set("todo:complete", async (interaction: StringSelectMenuInteract
   if (completed > 0) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to complete todo(s).")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Failed to complete todo(s).")], flags: MessageFlags.Ephemeral });
   }
 });
 
@@ -278,7 +276,7 @@ modalHandlers.set("todo:add", async (interaction: ModalSubmitInteraction) => {
 
   const parseResult = todoContentSchema.safeParse(content);
   if (!parseResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Task must be 1-200 characters.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Task must be 1-200 characters.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -293,7 +291,7 @@ modalHandlers.set("todo:edit", async (interaction: ModalSubmitInteraction) => {
 
   const parseResult = todoContentSchema.safeParse(content);
   if (!parseResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Task must be 1-200 characters.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Task must be 1-200 characters.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -302,6 +300,6 @@ modalHandlers.set("todo:edit", async (interaction: ModalSubmitInteraction) => {
   if (success) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to edit todo.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Failed to edit todo.")], flags: MessageFlags.Ephemeral });
   }
 });

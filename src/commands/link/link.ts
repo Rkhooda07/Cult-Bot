@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
@@ -64,6 +64,7 @@ commands.set("link", {
     ) as unknown as SlashCommandBuilder,
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const subcommand = interaction.options.getSubcommand();
 
     if (subcommand === "github") {
@@ -71,9 +72,8 @@ commands.set("link", {
       const parsed = githubUsernameSchema.safeParse(input);
 
       if (!parsed.success) {
-        await interaction.reply({
+        await interaction.editReply({
           embeds: [createErrorEmbed("That doesn't look like a valid GitHub username.")],
-          ephemeral: true,
         });
         return;
       }
@@ -85,14 +85,13 @@ commands.set("link", {
         await linkGithub(interaction.user.id, username);
       } catch (err) {
         logger.error({ err, userId: interaction.user.id }, "Failed to link GitHub account");
-        await interaction.reply({
+        await interaction.editReply({
           embeds: [createErrorEmbed("Failed to link your GitHub account. Please try again.")],
-          ephemeral: true,
         });
         return;
       }
 
-      await interaction.reply({
+      await interaction.editReply({
         embeds: [
           createEmbed("stats")
             .setTitle("🔗 GitHub Linked")
@@ -100,7 +99,6 @@ commands.set("link", {
               `Linked to [**${username}**](https://github.com/${username}).\n\nNew public commits will award **+20 XP** each (up to 5/day) and — if a server you're in has an announce channel set — get celebrated there automatically. Polls run every 15 minutes.`
             ),
         ],
-        ephemeral: true,
       });
       return;
     }
@@ -110,17 +108,13 @@ commands.set("link", {
       const parsed = leetcodeUsernameSchema.safeParse(input);
 
       if (!parsed.success) {
-        await interaction.reply({
+        await interaction.editReply({
           embeds: [createErrorEmbed("That doesn't look like a valid LeetCode username.")],
-          ephemeral: true,
         });
         return;
       }
 
       const username = parsed.data;
-
-      // Fetching the profile can be slow; defer so we don't hit the 3s limit.
-      await interaction.deferReply({ ephemeral: true });
 
       try {
         await ensureUser(interaction.user.id, interaction.user.username);
@@ -166,17 +160,13 @@ commands.set("link", {
       const parsed = codeforcesHandleSchema.safeParse(input);
 
       if (!parsed.success) {
-        await interaction.reply({
+        await interaction.editReply({
           embeds: [createErrorEmbed("That doesn't look like a valid Codeforces handle.")],
-          ephemeral: true,
         });
         return;
       }
 
       const handle = parsed.data;
-
-      // The CF API round-trip can be slow; defer so we don't hit the 3s limit.
-      await interaction.deferReply({ ephemeral: true });
 
       try {
         await ensureUser(interaction.user.id, interaction.user.username);

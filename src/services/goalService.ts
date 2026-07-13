@@ -1,11 +1,9 @@
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import * as chrono from "chrono-node";
 import { DateTime } from "luxon";
+import { prisma } from "../database/prisma";
 import { updateStreak } from "./streakService";
 import { award } from "./xpService";
-
-const prisma = new PrismaClient();
 
 export const goalTitleSchema = z.string().min(1).max(100).trim();
 export const goalProgressSchema = z.coerce.number().min(0).max(100);

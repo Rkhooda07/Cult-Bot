@@ -12,6 +12,7 @@ import {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
+  MessageFlags,
 } from "discord.js";
 import { commands, buttonHandlers, selectHandlers, modalHandlers } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
@@ -59,14 +60,10 @@ async function renderPanel(
 
   const finalComponents = buildActionRowsWithUserId(userId, data);
 
-  if (interaction.isChatInputCommand()) {
-    await interaction.reply({ embeds: [embed], components, ephemeral: true });
+  if (interaction.replied || interaction.deferred) {
+    await interaction.editReply({ embeds: [embed], components });
   } else {
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({ embeds: [embed], components });
-    } else {
-      await interaction.reply({ embeds: [embed], components, ephemeral: true });
-    }
+    await interaction.reply({ embeds: [embed], components, flags: MessageFlags.Ephemeral });
   }
 }
 
@@ -76,6 +73,7 @@ commands.set("goal", {
     .setDescription("Open your personal goal panel"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     await renderPanel(interaction, 1);
   },
 });
@@ -90,7 +88,7 @@ buttonHandlers.set("goal:progress", async (interaction: ButtonInteraction) => {
   const inProgressGoals = goals.filter((g) => g.status === "IN_PROGRESS");
 
   if (inProgressGoals.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to update.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to update.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -102,14 +100,14 @@ buttonHandlers.set("goal:progress", async (interaction: ButtonInteraction) => {
   }
 
   const selectMenu = createProgressSelectMenu(interaction.user.id, goals);
-  await interaction.reply({ components: [selectMenu], ephemeral: true });
+  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
 });
 
 buttonHandlers.set("goal:complete", async (interaction: ButtonInteraction) => {
   const inProgressGoals = await getInProgressGoals(interaction.user.id);
 
   if (inProgressGoals.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to complete.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to complete.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -120,14 +118,14 @@ buttonHandlers.set("goal:complete", async (interaction: ButtonInteraction) => {
   }
 
   const selectMenu = createCompleteSelectMenu(interaction.user.id, inProgressGoals);
-  await interaction.reply({ components: [selectMenu], ephemeral: true });
+  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
 });
 
 buttonHandlers.set("goal:abandon", async (interaction: ButtonInteraction) => {
   const inProgressGoals = await getInProgressGoals(interaction.user.id);
 
   if (inProgressGoals.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to abandon.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to abandon.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -138,14 +136,14 @@ buttonHandlers.set("goal:abandon", async (interaction: ButtonInteraction) => {
   }
 
   const selectMenu = createAbandonSelectMenu(interaction.user.id, inProgressGoals);
-  await interaction.reply({ components: [selectMenu], ephemeral: true });
+  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
 });
 
 buttonHandlers.set("goal:delete", async (interaction: ButtonInteraction) => {
   const goals = await getAllGoals(interaction.user.id);
 
   if (goals.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No goals to delete.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("No goals to delete.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -166,13 +164,13 @@ buttonHandlers.set("goal:delete", async (interaction: ButtonInteraction) => {
     await interaction.reply({
       embeds: [createEmbed("goals").setTitle("🗑️ Delete Goal").setDescription(`Delete "${goals[0].title}"?`)],
       components: [confirmRow],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
   const selectMenu = createDeleteSelectMenu(interaction.user.id, goals);
-  await interaction.reply({ components: [selectMenu], ephemeral: true });
+  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
 });
 
 buttonHandlers.set("goal:page", async (interaction: ButtonInteraction) => {
@@ -199,7 +197,7 @@ selectHandlers.set("goal:progress", async (interaction: StringSelectMenuInteract
   const goal = goals.find((g) => g.id === goalId);
 
   if (!goal) {
-    await interaction.reply({ embeds: [createErrorEmbed("Goal not found.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Goal not found.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -248,7 +246,7 @@ modalHandlers.set("goal:add", async (interaction: ModalSubmitInteraction) => {
 
   const titleResult = goalTitleSchema.safeParse(title);
   if (!titleResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Goal title must be 1-100 characters.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Goal title must be 1-100 characters.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -263,7 +261,7 @@ modalHandlers.set("goal:progress", async (interaction: ModalSubmitInteraction) =
 
   const progressResult = goalProgressSchema.safeParse(progressStr);
   if (!progressResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Progress must be a number between 0 and 100.")], ephemeral: true });
+    await interaction.reply({ embeds: [createErrorEmbed("Progress must be a number between 0 and 100.")], flags: MessageFlags.Ephemeral });
     return;
   }
 
