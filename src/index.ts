@@ -54,6 +54,10 @@ async function main() {
   const { startGithubPoller } = await import("./cron/githubPoller");
   startGithubPoller(client);
 
+  // Start LeetCode activity poller (runs every 15 min)
+  const { startLeetcodePoller } = await import("./cron/leetcodePoller");
+  startLeetcodePoller(client);
+
   await client.login(env.DISCORD_TOKEN);
 }
 
