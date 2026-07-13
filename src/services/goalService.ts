@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as chrono from "chrono-node";
 import { DateTime } from "luxon";
 import { updateStreak } from "./streakService";
+import { award } from "./xpService";
 
 const prisma = new PrismaClient();
 
@@ -151,13 +152,20 @@ export async function updateGoalProgress(
   const status = progress >= 100 ? "COMPLETED" : "IN_PROGRESS";
   const completedAt = progress >= 100 ? new Date() : null;
 
+  // Check completion state before updating progress to avoid double-awarding XP
+  const beforeGoal = await prisma.goal.findUnique({
+    where: { id: goalId },
+  });
+  const wasCompleted = beforeGoal?.status === "COMPLETED";
+
   const result = await prisma.goal.updateMany({
     where: { id: goalId, userId },
     data: { progress, status, completedAt },
   });
 
-  if (result.count > 0 && progress >= 100) {
+  if (result.count > 0 && progress >= 100 && !wasCompleted) {
     await updateStreak(userId);
+    await award(userId, 50, "goal_completed");
   }
 
   return result.count > 0;
@@ -171,6 +179,7 @@ export async function completeGoal(userId: string, goalId: string): Promise<bool
 
   if (result.count > 0) {
     await updateStreak(userId);
+    await award(userId, 50, "goal_completed");
   }
 
   return result.count > 0;

@@ -37,6 +37,7 @@ import "./commands/focus/focus";
 import "./commands/streak/streak";
 import "./commands/stats/stats";
 import "./commands/level/level";
+import "./commands/badges/badges";
 // (add more as phases are built)
 
 // ---------------------------------------------------------------------------

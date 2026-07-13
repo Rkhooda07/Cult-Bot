@@ -1,10 +1,12 @@
 import { prisma } from "../database/prisma";
+import { evaluate as evaluateBadges, EarnedBadgeInfo } from "./badgeService";
 
 export interface XPResult {
   xpGained: number;
   newXP: number;
   newLevel: number;
   leveledUp: boolean;
+  earnedBadges?: EarnedBadgeInfo[];
 }
 
 /**
@@ -31,7 +33,7 @@ export function calculateLevel(xp: number): number {
 
 /**
  * Award XP to a user, creating an XPLog entry and updating User.xp + User.level.
- * Returns the result with leveledUp flag.
+ * Returns the result with leveledUp flag and earnedBadges array.
  */
 export async function award(
   userId: string,
@@ -56,7 +58,10 @@ export async function award(
     }),
   ]);
 
-  return { xpGained: amount, newXP, newLevel, leveledUp };
+  // Automatically evaluate badges after any XP award event
+  const earnedBadges = await evaluateBadges(userId);
+
+  return { xpGained: amount, newXP, newLevel, leveledUp, earnedBadges };
 }
 
 /**

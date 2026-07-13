@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits } from "discord.js";
 import { env } from "./config/env";
 import { logger } from "./utils/logger";
+import { setClient } from "./utils/client";
 
 // ── Import command modules (side-effect: registers into commands / buttonHandlers / …) ──
 import "./commands/ping/ping";
@@ -15,6 +16,7 @@ import "./commands/focus/focus";
 import "./commands/streak/streak";
 import "./commands/stats/stats";
 import "./commands/level/level";
+import "./commands/badges/badges";
 
 async function main() {
   const client = new Client({
@@ -27,6 +29,8 @@ async function main() {
       GatewayIntentBits.GuildMembers,
     ],
   });
+
+  setClient(client);
 
   // Load event handlers
   const { registerReadyEvent } = await import("./events/ready");
