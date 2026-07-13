@@ -87,11 +87,6 @@ buttonHandlers.set("goal:progress", async (interaction: ButtonInteraction) => {
   const goals = await getAllGoals(interaction.user.id);
   const inProgressGoals = goals.filter((g) => g.status === "IN_PROGRESS");
 
-  if (inProgressGoals.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to update.")], flags: MessageFlags.Ephemeral });
-    return;
-  }
-
   if (inProgressGoals.length === 1) {
     const goal = inProgressGoals[0];
     const modal = createProgressModal(interaction.user.id, goal.id, goal.progress);
@@ -99,55 +94,61 @@ buttonHandlers.set("goal:progress", async (interaction: ButtonInteraction) => {
     return;
   }
 
+  await interaction.deferUpdate();
+  if (inProgressGoals.length === 0) {
+    await interaction.editReply({ embeds: [createErrorEmbed("No in-progress goals to update.")], components: [] });
+    return;
+  }
+
   const selectMenu = createProgressSelectMenu(interaction.user.id, goals);
-  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
+  await interaction.editReply({ embeds: [], components: [selectMenu] });
 });
 
 buttonHandlers.set("goal:complete", async (interaction: ButtonInteraction) => {
   const inProgressGoals = await getInProgressGoals(interaction.user.id);
 
-  if (inProgressGoals.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to complete.")], flags: MessageFlags.Ephemeral });
-    return;
-  }
-
   if (inProgressGoals.length === 1) {
+    await interaction.deferUpdate();
     await completeGoal(interaction.user.id, inProgressGoals[0].id);
     await renderPanel(interaction, 1);
     return;
   }
 
+  await interaction.deferUpdate();
+  if (inProgressGoals.length === 0) {
+    await interaction.editReply({ embeds: [createErrorEmbed("No in-progress goals to complete.")], components: [] });
+    return;
+  }
+
   const selectMenu = createCompleteSelectMenu(interaction.user.id, inProgressGoals);
-  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
+  await interaction.editReply({ embeds: [], components: [selectMenu] });
 });
 
 buttonHandlers.set("goal:abandon", async (interaction: ButtonInteraction) => {
   const inProgressGoals = await getInProgressGoals(interaction.user.id);
 
-  if (inProgressGoals.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No in-progress goals to abandon.")], flags: MessageFlags.Ephemeral });
-    return;
-  }
-
   if (inProgressGoals.length === 1) {
+    await interaction.deferUpdate();
     await abandonGoal(interaction.user.id, inProgressGoals[0].id);
     await renderPanel(interaction, 1);
     return;
   }
 
+  await interaction.deferUpdate();
+  if (inProgressGoals.length === 0) {
+    await interaction.editReply({ embeds: [createErrorEmbed("No in-progress goals to abandon.")], components: [] });
+    return;
+  }
+
   const selectMenu = createAbandonSelectMenu(interaction.user.id, inProgressGoals);
-  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
+  await interaction.editReply({ embeds: [], components: [selectMenu] });
 });
 
 buttonHandlers.set("goal:delete", async (interaction: ButtonInteraction) => {
   const goals = await getAllGoals(interaction.user.id);
 
-  if (goals.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No goals to delete.")], flags: MessageFlags.Ephemeral });
-    return;
-  }
-
   if (goals.length === 1) {
+    await interaction.deferUpdate();
     const customId = encode("goal", "confirmDelete", interaction.user.id, goals[0].id);
     const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -161,25 +162,32 @@ buttonHandlers.set("goal:delete", async (interaction: ButtonInteraction) => {
         .setStyle(ButtonStyle.Secondary)
     );
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [createEmbed("goals").setTitle("🗑️ Delete Goal").setDescription(`Delete "${goals[0].title}"?`)],
       components: [confirmRow],
-      flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
+  await interaction.deferUpdate();
+  if (goals.length === 0) {
+    await interaction.editReply({ embeds: [createErrorEmbed("No goals to delete.")], components: [] });
+    return;
+  }
+
   const selectMenu = createDeleteSelectMenu(interaction.user.id, goals);
-  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
+  await interaction.editReply({ embeds: [], components: [selectMenu] });
 });
 
 buttonHandlers.set("goal:page", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const parsed = decode(interaction.customId);
   const page = parseInt(parsed.entityId, 10);
   await renderPanel(interaction, page);
 });
 
 buttonHandlers.set("goal:confirmDelete", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const parsed = decode(interaction.customId);
   const goalId = parsed.entityId;
 
@@ -188,6 +196,7 @@ buttonHandlers.set("goal:confirmDelete", async (interaction: ButtonInteraction) 
 });
 
 buttonHandlers.set("goal:cancel", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   await renderPanel(interaction, 1);
 });
 
@@ -206,6 +215,7 @@ selectHandlers.set("goal:progress", async (interaction: StringSelectMenuInteract
 });
 
 selectHandlers.set("goal:complete", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const goalIds = interaction.values;
 
   for (const goalId of goalIds) {
@@ -216,6 +226,7 @@ selectHandlers.set("goal:complete", async (interaction: StringSelectMenuInteract
 });
 
 selectHandlers.set("goal:abandon", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const goalIds = interaction.values;
 
   for (const goalId of goalIds) {
@@ -226,6 +237,7 @@ selectHandlers.set("goal:abandon", async (interaction: StringSelectMenuInteracti
 });
 
 selectHandlers.set("goal:delete", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const goalIds = interaction.values;
 
   for (const goalId of goalIds) {
@@ -236,17 +248,19 @@ selectHandlers.set("goal:delete", async (interaction: StringSelectMenuInteractio
 });
 
 selectHandlers.set("goal:page", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const page = parseInt(interaction.values[0], 10);
   await renderPanel(interaction, page);
 });
 
 modalHandlers.set("goal:add", async (interaction: ModalSubmitInteraction) => {
+  await interaction.deferUpdate();
   const title = interaction.fields.getTextInputValue("title").trim();
   const deadlineInput = interaction.fields.getTextInputValue("deadline").trim() || undefined;
 
   const titleResult = goalTitleSchema.safeParse(title);
   if (!titleResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Goal title must be 1-100 characters.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Goal title must be 1-100 characters.")], components: [] });
     return;
   }
 
@@ -255,13 +269,14 @@ modalHandlers.set("goal:add", async (interaction: ModalSubmitInteraction) => {
 });
 
 modalHandlers.set("goal:progress", async (interaction: ModalSubmitInteraction) => {
+  await interaction.deferUpdate();
   const progressStr = interaction.fields.getTextInputValue("progress").trim();
   const parsed = decode(interaction.customId);
   const goalId = parsed.entityId;
 
   const progressResult = goalProgressSchema.safeParse(progressStr);
   if (!progressResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Progress must be a number between 0 and 100.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Progress must be a number between 0 and 100.")], components: [] });
     return;
   }
 

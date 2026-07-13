@@ -197,12 +197,14 @@ buttonHandlers.set("todo:complete", async (interaction: ButtonInteraction) => {
 });
 
 buttonHandlers.set("todo:page", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const parsed = decode(interaction.customId);
   const page = parseInt(parsed.entityId, 10);
   await renderPanel(interaction, page);
 });
 
 buttonHandlers.set("todo:confirmDelete", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const parsed = decode(interaction.customId);
   const todoId = parsed.entityId;
 
@@ -211,11 +213,12 @@ buttonHandlers.set("todo:confirmDelete", async (interaction: ButtonInteraction) 
   if (success) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to delete todo.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Failed to delete todo.")] });
   }
 });
 
 buttonHandlers.set("todo:cancel", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   await renderPanel(interaction, 1);
 });
 
@@ -234,6 +237,7 @@ selectHandlers.set("todo:edit", async (interaction: StringSelectMenuInteraction)
 });
 
 selectHandlers.set("todo:delete", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const todoIds = interaction.values;
 
   let deleted = 0;
@@ -245,11 +249,12 @@ selectHandlers.set("todo:delete", async (interaction: StringSelectMenuInteractio
   if (deleted > 0) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to delete todo(s).")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Failed to delete todo(s).")] });
   }
 });
 
 selectHandlers.set("todo:complete", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const todoIds = interaction.values;
 
   let completed = 0;
@@ -261,21 +266,23 @@ selectHandlers.set("todo:complete", async (interaction: StringSelectMenuInteract
   if (completed > 0) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to complete todo(s).")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Failed to complete todo(s).")] });
   }
 });
 
 selectHandlers.set("todo:page", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const page = parseInt(interaction.values[0], 10);
   await renderPanel(interaction, page);
 });
 
 modalHandlers.set("todo:add", async (interaction: ModalSubmitInteraction) => {
+  await interaction.deferUpdate();
   const content = interaction.fields.getTextInputValue("content");
 
   const parseResult = todoContentSchema.safeParse(content);
   if (!parseResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Task must be 1-200 characters.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Task must be 1-200 characters.")], components: [] });
     return;
   }
 
@@ -284,13 +291,14 @@ modalHandlers.set("todo:add", async (interaction: ModalSubmitInteraction) => {
 });
 
 modalHandlers.set("todo:edit", async (interaction: ModalSubmitInteraction) => {
+  await interaction.deferUpdate();
   const content = interaction.fields.getTextInputValue("content");
   const parsed = decode(interaction.customId);
   const todoId = parsed.entityId;
 
   const parseResult = todoContentSchema.safeParse(content);
   if (!parseResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Task must be 1-200 characters.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Task must be 1-200 characters.")], components: [] });
     return;
   }
 
@@ -299,6 +307,6 @@ modalHandlers.set("todo:edit", async (interaction: ModalSubmitInteraction) => {
   if (success) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to edit todo.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Failed to edit todo.")] });
   }
 });

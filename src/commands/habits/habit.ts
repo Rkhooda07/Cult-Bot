@@ -180,6 +180,7 @@ modalHandlers.set("habit:addName", async (interaction: ModalSubmitInteraction) =
 // ─── Select: habit:setFreq — Step 3 — Create the Habit row ──────────────────
 
 selectHandlers.set("habit:setFreq", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const { entityId, ownerId } = decode(interaction.customId);
 
   const name = decodeURIComponent(entityId);
@@ -201,17 +202,19 @@ buttonHandlers.set("habit:checkoff", async (interaction: ButtonInteraction) => {
   const habits = await listHabits(userId);
   const pending = habits.filter((h) => !h.completedToday);
 
-  if (pending.length === 0) {
-    await interaction.reply({
-      embeds: [createErrorEmbed("All habits are already checked off for today! 🎉")],
-      flags: MessageFlags.Ephemeral,
-    });
+  if (pending.length === 1) {
+    await interaction.deferUpdate();
+    await toggleHabitToday(userId, pending[0].id);
+    await renderPanel(interaction);
     return;
   }
 
-  if (pending.length === 1) {
-    await toggleHabitToday(userId, pending[0].id);
-    await renderPanel(interaction);
+  await interaction.deferUpdate();
+  if (pending.length === 0) {
+    await interaction.editReply({
+      embeds: [createErrorEmbed("All habits are already checked off for today! 🎉")],
+      components: [],
+    });
     return;
   }
 
@@ -232,12 +235,13 @@ buttonHandlers.set("habit:checkoff", async (interaction: ButtonInteraction) => {
     );
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
-  await interaction.reply({ components: [row], flags: MessageFlags.Ephemeral });
+  await interaction.editReply({ embeds: [], components: [row] });
 });
 
 // ─── Select: habit:doCheckoff ────────────────────────────────────────────────
 
 selectHandlers.set("habit:doCheckoff", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const userId = interaction.user.id;
 
   for (const habitId of interaction.values) {
@@ -253,15 +257,8 @@ buttonHandlers.set("habit:delete", async (interaction: ButtonInteraction) => {
   const userId = interaction.user.id;
   const habits = await listHabits(userId);
 
-  if (habits.length === 0) {
-    await interaction.reply({
-      embeds: [createErrorEmbed("You have no habits to delete.")],
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
   if (habits.length === 1) {
+    await interaction.deferUpdate();
     // Single habit: confirm before deleting
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -279,7 +276,16 @@ buttonHandlers.set("habit:delete", async (interaction: ButtonInteraction) => {
       .setTitle("🗑️ Delete Habit")
       .setDescription(`Delete **${habits[0].name}**? This will remove all its logs too.`);
 
-    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [embed], components: [row] });
+    return;
+  }
+
+  await interaction.deferUpdate();
+  if (habits.length === 0) {
+    await interaction.editReply({
+      embeds: [createErrorEmbed("You have no habits to delete.")],
+      components: [],
+    });
     return;
   }
 
@@ -300,12 +306,13 @@ buttonHandlers.set("habit:delete", async (interaction: ButtonInteraction) => {
     );
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
-  await interaction.reply({ components: [row], flags: MessageFlags.Ephemeral });
+  await interaction.editReply({ embeds: [], components: [row] });
 });
 
 // ─── Button: habit:confirmDelete ─────────────────────────────────────────────
 
 buttonHandlers.set("habit:confirmDelete", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const { entityId } = decode(interaction.customId);
   await deleteHabit(interaction.user.id, entityId);
   await renderPanel(interaction);
@@ -314,12 +321,14 @@ buttonHandlers.set("habit:confirmDelete", async (interaction: ButtonInteraction)
 // ─── Button: habit:cancel ─────────────────────────────────────────────────────
 
 buttonHandlers.set("habit:cancel", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   await renderPanel(interaction);
 });
 
 // ─── Select: habit:doDelete ───────────────────────────────────────────────────
 
 selectHandlers.set("habit:doDelete", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const userId = interaction.user.id;
 
   for (const habitId of interaction.values) {

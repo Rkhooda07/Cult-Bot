@@ -137,10 +137,11 @@ buttonHandlers.set("remind:add", async (interaction: ButtonInteraction) => {
 });
 
 buttonHandlers.set("remind:cancel", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const reminders = await getAllUpcomingReminders(interaction.user.id);
 
   if (reminders.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No upcoming reminders to cancel.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("No upcoming reminders to cancel.")], components: [] });
     return;
   }
 
@@ -148,20 +149,18 @@ buttonHandlers.set("remind:cancel", async (interaction: ButtonInteraction) => {
   const timezone = user?.timezone || "UTC";
 
   const selectMenu = createCancelSelectMenu(interaction.user.id, reminders, timezone);
-  await interaction.reply({ components: [selectMenu], flags: MessageFlags.Ephemeral });
+  await interaction.editReply({ embeds: [], components: [selectMenu] });
 });
 
 buttonHandlers.set("remind:page", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const parsed = decode(interaction.customId);
   const page = parseInt(parsed.entityId, 10);
   await renderPanel(interaction, page);
 });
 
-buttonHandlers.set("remind:cancel", async (interaction: ButtonInteraction) => {
-  await renderPanel(interaction, 1);
-});
-
 selectHandlers.set("remind:cancel", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const reminderIds = interaction.values;
 
   let cancelled = 0;
@@ -173,16 +172,18 @@ selectHandlers.set("remind:cancel", async (interaction: StringSelectMenuInteract
   if (cancelled > 0) {
     await renderPanel(interaction, 1);
   } else {
-    await interaction.reply({ embeds: [createErrorEmbed("Failed to cancel reminder(s).")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Failed to cancel reminder(s).")] });
   }
 });
 
 selectHandlers.set("remind:page", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const page = parseInt(interaction.values[0], 10);
   await renderPanel(interaction, page);
 });
 
 modalHandlers.set("remind:add", async (interaction: ModalSubmitInteraction) => {
+  await interaction.deferUpdate();
   const message = interaction.fields.getTextInputValue("message").trim();
   const timeInput = interaction.fields.getTextInputValue("time").trim();
 
@@ -190,7 +191,7 @@ modalHandlers.set("remind:add", async (interaction: ModalSubmitInteraction) => {
   const timeResult = remindTimeSchema.safeParse(timeInput);
 
   if (!messageResult.success || !timeResult.success) {
-    await interaction.reply({ embeds: [createErrorEmbed("Invalid input.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("Invalid input.")], components: [] });
     return;
   }
 
@@ -206,7 +207,7 @@ modalHandlers.set("remind:add", async (interaction: ModalSubmitInteraction) => {
   );
 
   if ("error" in result) {
-    await interaction.reply({ embeds: [createErrorEmbed(result.error)], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed(result.error)], components: [] });
     return;
   }
 
