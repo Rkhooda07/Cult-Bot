@@ -12,6 +12,7 @@ import {
   ButtonStyle,
   TextChannel,
 } from "discord.js";
+import { z } from "zod";
 import { commands, buttonHandlers, modalHandlers, autocompleteHandlers } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { encode, decode } from "../../utils/customId";
@@ -26,6 +27,11 @@ import {
   completeChallenge,
   getUserChallengeStatus,
 } from "../../services/challengeService";
+
+// Modal-input validation (spec Section 10) — every modal submit is zod-validated
+// before any DB write. Bounds mirror the modal's own maxLength caps.
+const challengeTitleSchema = z.string().trim().min(1).max(100);
+const challengeDescriptionSchema = z.string().trim().min(1).max(500);
 
 async function sendOrUpdateAnnouncement(challengeId: string, guildId: string): Promise<void> {
   const challenge = await getChallenge(challengeId);
@@ -250,8 +256,28 @@ modalHandlers.set("challenge:create", async (interaction: ModalSubmitInteraction
     return;
   }
 
-  const title = interaction.fields.getTextInputValue("title");
-  const description = interaction.fields.getTextInputValue("description");
+  const titleResult = challengeTitleSchema.safeParse(interaction.fields.getTextInputValue("title"));
+  if (!titleResult.success) {
+    await interaction.reply({
+      embeds: [createErrorEmbed("Please enter a challenge title (1–100 characters).")],
+      ephemeral: true,
+    });
+    return;
+  }
+  const title = titleResult.data;
+
+  const descriptionResult = challengeDescriptionSchema.safeParse(
+    interaction.fields.getTextInputValue("description")
+  );
+  if (!descriptionResult.success) {
+    await interaction.reply({
+      embeds: [createErrorEmbed("Please enter a description (1–500 characters).")],
+      ephemeral: true,
+    });
+    return;
+  }
+  const description = descriptionResult.data;
+
   const endDateStr = interaction.fields.getTextInputValue("endDate");
 
   const parsed = chrono.parse(endDateStr, new Date(), { forwardDate: true });

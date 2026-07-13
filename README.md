@@ -94,20 +94,34 @@ Bot ready
 
 ### 7. Deploy slash commands
 
+Register the bot's slash commands with Discord (run once, and again whenever a
+command's definition changes):
+
 ```bash
-# (command registration script will be added in Phase 1)
-node dist/deploy-commands.js
+npm run deploy
 ```
 
 ---
 
-## Docker (full stack)
+## Docker (full stack) — recommended
+
+From a fresh clone, with `.env` filled in:
 
 ```bash
 docker-compose up --build
 ```
 
-This starts `postgres` + `bot`, runs `prisma migrate deploy` on startup, then boots the bot.
+This starts `postgres` + `bot`. The `bot` container runs `npx prisma migrate deploy`
+automatically on startup (see the `command:` in `docker-compose.yml`) before booting,
+so **there are zero manual database steps** — no separate migrate/generate needed.
+Postgres data persists in the `postgres_data` volume across restarts.
+
+The only step Docker can't do for you is registering slash commands with Discord's
+API (it needs your bot token). Run that once against the same `.env`:
+
+```bash
+npm run deploy
+```
 
 ---
 
