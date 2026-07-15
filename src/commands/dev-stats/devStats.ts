@@ -1,12 +1,13 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags, AttachmentBuilder } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
 import { prisma } from "../../database/prisma";
 import { ensureUser } from "../../services/reminderService";
-import { getCommitsToday } from "../../services/githubService";
+import { getCommitsToday, fetchContributionCalendar } from "../../services/githubService";
 import { getSolvesToday as getLeetcodeSolvesToday } from "../../services/leetcodeService";
 import { fetchSolvedToday as getCodeforcesSolvesToday } from "../../services/codeforcesService";
+import { renderContributionGraph } from "../../utils/contributionGraphRenderer";
 
 /**
  * /dev-stats — combined dev-activity dashboard (spec Section 7, Phase 4).
@@ -71,9 +72,24 @@ commands.set("dev-stats", {
         codeforces ? getCodeforcesSolvesToday(codeforces.handle) : Promise.resolve<null>(null),
       ]);
 
+      // If GitHub is linked, fetch the contribution calendar and render the graph.
+      let graphAttachment: AttachmentBuilder | null = null;
+      if (github) {
+        const calendar = await fetchContributionCalendar(github.username);
+        if (calendar) {
+          const graphBuffer = await renderContributionGraph(calendar);
+          graphAttachment = new AttachmentBuilder(graphBuffer, { name: "contribution-graph.png" });
+        }
+      }
+
       const embed = createEmbed("stats")
         .setTitle("📈 Dev Stats — Today")
         .setThumbnail(interaction.user.displayAvatarURL());
+
+      // Attach the contribution graph if available (shown below the fields).
+      if (graphAttachment) {
+        embed.setImage("attachment://contribution-graph.png");
+      }
 
       // ── GitHub ────────────────────────────────────────────────────────────
       if (github) {
@@ -120,7 +136,11 @@ commands.set("dev-stats", {
         });
       }
 
-      await interaction.editReply({ embeds: [embed] });
+      if (graphAttachment) {
+        await interaction.editReply({ embeds: [embed], files: [graphAttachment] });
+      } else {
+        await interaction.editReply({ embeds: [embed] });
+      }
     } catch (err) {
       logger.error({ err, userId: interaction.user.id }, "Failed to render /dev-stats");
       await interaction.editReply({

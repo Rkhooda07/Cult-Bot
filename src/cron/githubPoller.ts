@@ -6,9 +6,12 @@ import { award } from "../services/xpService";
 import { broadcast } from "../services/broadcastService";
 import {
   fetchNewCommits,
+  fetchContributionCalendar,
   countGithubXpCommitsToday,
   updateLastCommitSha,
+  updateLastContributionCount,
   XP_PER_COMMIT,
+  XP_PER_PRIVATE_ACTIVITY,
   MAX_XP_COMMITS_PER_DAY,
   GITHUB_XP_REASON,
 } from "../services/githubService";
@@ -22,7 +25,12 @@ let isRunning = false;
  *   1. Fetch commits newer than the stored lastCommitSha via the GitHub API.
  *   2. Award +20 XP per new commit, capped at 5 XP-awarding commits/day/user.
  *   3. Advance lastCommitSha so commits are never double-counted.
- *   4. Broadcast the activity (broadcastService respects per-user opt-out and
+ *   4. Separately query GitHub's GraphQL API for total contribution count.
+ *      If total grew by more than the new public commits detected this cycle,
+ *      treat the difference as private activity: award +10 XP under the SAME
+ *      shared daily cap (5/day total combined), and broadcast a detail-free
+ *      "Private Progress!" embed.
+ *   5. Broadcast the activity (broadcastService respects per-user opt-out and
  *      per-guild announce-channel config).
  *
  * The cap counts XPLog rows (reason "GitHub commit ...") created today (UTC),
@@ -109,6 +117,65 @@ export function startGithubPoller(client: Client): void {
               description: `pushed ${newCommitCount} ${commitWord} to \`${repo}\``,
               xpAwarded: totalXp,
             });
+          }
+
+          // --- Private activity detection (GraphQL contribution calendar) ---
+          // Query total contributions and compare to stored lastContributionCount.
+          // If the increase exceeds the public commits we just detected, the
+          // difference is private-repo activity. Award +10 XP under the SAME
+          // shared daily cap (5/day total combined), broadcast a detail-free embed.
+          const calendar = await fetchContributionCalendar(link.username);
+          if (calendar) {
+            const totalContributions = calendar.totalContributions;
+            const prevCount = link.lastContributionCount ?? 0;
+            const totalIncrease = totalContributions - prevCount;
+
+            // Only consider it private activity if total grew more than the
+            // public commits we already detected this cycle.
+            if (totalIncrease > newCommitCount) {
+              const privateActivityCount = totalIncrease - newCommitCount;
+
+              // Re-check the daily cap (shared with public commits) since we may
+              // have just awarded XP for public commits above.
+              const alreadyAwardedAfterPublic = await countGithubXpCommitsToday(link.userId);
+              const remainingAfterPublic = Math.max(0, MAX_XP_COMMITS_PER_DAY - alreadyAwardedAfterPublic);
+
+              if (remainingAfterPublic > 0 && privateActivityCount > 0) {
+                // Award +10 XP for private activity (capped at 1 award per cycle
+                // to keep it simple — multiple private-repo contributions in one
+                // poll cycle still yield a single +10).
+                await award(
+                  link.userId,
+                  XP_PER_PRIVATE_ACTIVITY,
+                  "GitHub private contribution"
+                );
+
+                // Broadcast the private-activity variant: no repo name, no commit message.
+                await broadcast(link.userId, {
+                  emoji: "🔒",
+                  title: "Private Progress!",
+                  description: "made some private-repo progress today",
+                  xpAwarded: XP_PER_PRIVATE_ACTIVITY,
+                });
+
+                logger.info(
+                  {
+                    userId: link.userId,
+                    username: link.username,
+                    totalContributions,
+                    prevCount,
+                    totalIncrease,
+                    newCommitCount,
+                    privateActivityCount,
+                    xpAwarded: XP_PER_PRIVATE_ACTIVITY,
+                  },
+                  "GitHub poller: detected and awarded private activity"
+                );
+              }
+            }
+
+            // Always update the stored contribution count to the latest total.
+            await updateLastContributionCount(link.userId, totalContributions);
           }
         } catch (err) {
           logger.error(

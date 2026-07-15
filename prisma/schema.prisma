@@ -150,11 +150,12 @@ model UserBadge {
 }
 
 model GithubLink {
-  id            String  @id @default(cuid())
-  userId        String  @unique
-  user          User    @relation(fields: [userId], references: [id])
-  username      String
-  lastCommitSha String?
+  id                    String  @id @default(cuid())
+  userId                String  @unique
+  user                  User    @relation(fields: [userId], references: [id])
+  username              String
+  lastCommitSha         String?
+  lastContributionCount Int     @default(0)
 }
 
 model LeetCodeLink {

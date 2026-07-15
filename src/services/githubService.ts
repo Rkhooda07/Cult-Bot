@@ -10,6 +10,8 @@ import { logger } from "../utils/logger";
  *  - Persist the user's GithubLink (`/link github <username>`).
  *  - Poll the GitHub public API for a user's most recent public push events.
  *  - Provide the per-day XP cap accounting used by the poller (Section 10).
+ *  - Fetch contribution calendar from GitHub GraphQL API for private activity
+ *    detection and /dev-stats heatmap rendering.
  *
  * Polling only (no webhooks) per locked decision in Section 2.
  */
@@ -29,6 +31,9 @@ export const githubUsernameSchema = z
 export const XP_PER_COMMIT = 20;
 export const MAX_XP_COMMITS_PER_DAY = 5;
 
+/** +10 XP for detected private-repo activity, shares the same daily cap as public commits. */
+export const XP_PER_PRIVATE_ACTIVITY = 10;
+
 /** reason prefix used for XPLog rows, also used to count today's awarded commits. */
 export const GITHUB_XP_REASON = "GitHub commit";
 
@@ -45,6 +50,16 @@ export interface GithubCommitSummary {
   sha: string;
   repo: string; // "owner/name"
   repoShort: string; // "name"
+}
+
+export interface ContributionCalendarData {
+  totalContributions: number;
+  weeks: Array<{
+    contributionDays: Array<{
+      date: string;
+      contributionCount: number;
+    }>;
+  }>;
 }
 
 /**
@@ -79,6 +94,16 @@ export async function countGithubXpCommitsToday(userId: string): Promise<number>
       reason: { startsWith: GITHUB_XP_REASON },
       createdAt: { gte: startOfUtcDay },
     },
+  });
+}
+
+/**
+ * Update the stored lastContributionCount after processing private activity.
+ */
+export async function updateLastContributionCount(userId: string, count: number): Promise<void> {
+  await prisma.githubLink.update({
+    where: { userId },
+    data: { lastContributionCount: count },
   });
 }
 
@@ -225,4 +250,94 @@ export async function getCommitsToday(username: string): Promise<number | null> 
   }
 
   return count;
+}
+
+/**
+ * Fetch a user's contribution calendar from GitHub's GraphQL API.
+ * Returns the full calendar data including totalContributions and weekly breakdown.
+ * Returns null on network/API error so callers can handle gracefully.
+ *
+ * Note: Fine-grained PATs have limited GraphQL API support. If this fails with a
+ * permissions error, a classic PAT with just the `read:user` scope is required
+ * for this specific call. The existing GITHUB_TOKEN env var is used.
+ */
+export async function fetchContributionCalendar(username: string): Promise<ContributionCalendarData | null> {
+  const query = `
+    query($login: String!) {
+      user(login: $login) {
+        contributionsCollection {
+          contributionCalendar {
+            totalContributions
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "User-Agent": "DevOS-Bot",
+  };
+  if (env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+  }
+
+  try {
+    const res = await fetch("https://api.github.com/graphql", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ query, variables: { login: username } }),
+    });
+
+    if (!res.ok) {
+      logger.warn(
+        { username, status: res.status },
+        "githubService: non-OK response from GitHub GraphQL API"
+      );
+      return null;
+    }
+
+    const payload = await res.json() as any;
+
+    if (payload.errors) {
+      logger.warn(
+        { username, errors: payload.errors },
+        "githubService: GraphQL errors from contribution calendar query"
+      );
+      // Fine-grained PATs may lack GraphQL permissions; surface this in logs
+      if (payload.errors.some((e: any) => e.type === "FORBIDDEN" || e.message?.includes("permission"))) {
+        logger.error(
+          { username },
+          "githubService: GitHub token may lack GraphQL API scope (fine-grained PATs have limited GraphQL support). Use a classic PAT with read:user scope for this call."
+        );
+      }
+      return null;
+    }
+
+    const calendar = payload?.data?.user?.contributionsCollection?.contributionCalendar;
+    if (!calendar) {
+      logger.warn({ username }, "githubService: no contribution calendar data returned (user not found?)");
+      return null;
+    }
+
+    return {
+      totalContributions: calendar.totalContributions,
+      weeks: calendar.weeks.map((w: any) => ({
+        contributionDays: w.contributionDays.map((d: any) => ({
+          date: d.date,
+          contributionCount: d.contributionCount,
+        })),
+      })),
+    };
+  } catch (err) {
+    logger.error({ err, username }, "githubService: failed to fetch contribution calendar");
+    return null;
+  }
 }
