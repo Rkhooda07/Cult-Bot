@@ -7,7 +7,6 @@ const envSchema = z.object({
   DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
   DISCORD_CLIENT_ID: z.string().min(1, "DISCORD_CLIENT_ID is required"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  NIM_API_KEY: z.string().min(1, "NIM_API_KEY is required"),
   // Optional: higher GitHub API rate limits
   GITHUB_TOKEN: z.string().optional(),
 });

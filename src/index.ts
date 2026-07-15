@@ -21,8 +21,7 @@ import "./commands/habits/habit";
 // Phase 4: integrations
 import "./commands/link/link";
 import "./commands/dev-stats/devStats";
-// Phase 5: coach, leaderboard, challenge
-import "./commands/coach/coach";
+// Phase 5: leaderboard, challenge
 import "./commands/leaderboard/leaderboard";
 import "./commands/challenge/challenge";
 import "./commands/board/board";
