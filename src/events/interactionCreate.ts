@@ -5,6 +5,7 @@ import { commands, buttonHandlers, selectHandlers, modalHandlers, autocompleteHa
 import { decode } from "../utils/customId";
 import { assertOwner } from "../utils/permissions";
 import { createErrorEmbed } from "../utils/embedFactory";
+import { startTimer, logTiming } from "../utils/timing";
 
 /**
  * Global interaction router — spec Section 2 (Interaction persistence) and Section 6.4.
@@ -38,7 +39,9 @@ export function registerInteractionCreate(client: Client): void {
           { commandName: interaction.commandName, userId: interaction.user.id },
           "Dispatching slash command"
         );
+        const stop = startTimer();
         await handler.execute(interaction);
+        logTiming(`command:${interaction.commandName}`, stop(), { userId: interaction.user.id });
         return;
       }
 
@@ -72,7 +75,9 @@ export function registerInteractionCreate(client: Client): void {
           logger.warn({ key }, "No button handler registered for key");
           return;
         }
+        const stop = startTimer();
         await handler(interaction);
+        logTiming(`button:${key}`, stop(), { userId: interaction.user.id });
         return;
       }
 
@@ -92,7 +97,9 @@ export function registerInteractionCreate(client: Client): void {
           logger.warn({ key }, "No select handler registered for key");
           return;
         }
+        const stop = startTimer();
         await handler(interaction);
+        logTiming(`select:${key}`, stop(), { userId: interaction.user.id });
         return;
       }
 
@@ -113,7 +120,9 @@ export function registerInteractionCreate(client: Client): void {
           logger.warn({ key }, "No modal handler registered for key");
           return;
         }
+        const stop = startTimer();
         await handler(interaction);
+        logTiming(`modal:${key}`, stop(), { userId: interaction.user.id });
         return;
       }
     } catch (err) {

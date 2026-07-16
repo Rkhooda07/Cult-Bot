@@ -2,6 +2,9 @@ import { Client, GatewayIntentBits } from "discord.js";
 import { env } from "./config/env";
 import { logger } from "./utils/logger";
 import { setClient } from "./utils/client";
+import { startTimer, logTiming, timingEnabled } from "./utils/timing";
+
+const processStart = startTimer();
 
 // ── Import command modules (side-effect: registers into commands / buttonHandlers / …) ──
 import "./commands/ping/ping";
@@ -27,6 +30,8 @@ import "./commands/challenge/challenge";
 import "./commands/board/board";
 
 async function main() {
+  let stop = startTimer();
+
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
@@ -46,6 +51,8 @@ async function main() {
 
   registerReadyEvent(client);
   registerInteractionCreate(client);
+  logTiming("startup:client+events setup", stop());
+  stop = startTimer();
 
   // Start reminder poller (runs every 60s)
   const { startReminderPoller } = await import("./cron/reminderPoller");
@@ -70,8 +77,17 @@ async function main() {
   // Start Weekly Recap cron job (runs every hour)
   const { startWeeklyRecap } = await import("./cron/weeklyRecap");
   startWeeklyRecap(client);
+  logTiming("startup:cron jobs registered", stop());
 
+  stop = startTimer();
   await client.login(env.DISCORD_TOKEN);
+  logTiming("startup:client.login (gateway handshake)", stop());
+
+  if (timingEnabled) {
+    client.once("ready", () => {
+      logTiming("startup:process start -> ready", processStart());
+    });
+  }
 }
 
 main().catch((err) => {
