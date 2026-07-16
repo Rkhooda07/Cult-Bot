@@ -40,6 +40,8 @@ model Todo {
   createdAt DateTime  @default(now())
   doneAt    DateTime?
   dueDate   DateTime?
+
+  @@index([userId, done, createdAt])
 }
 
 model Goal {
@@ -52,6 +54,8 @@ model Goal {
   progress    Int        @default(0) // 0-100
   createdAt   DateTime   @default(now())
   completedAt DateTime?
+
+  @@index([userId, status, createdAt])
 }
 
 enum GoalStatus {
@@ -69,6 +73,9 @@ model Reminder {
   remindAt  DateTime
   sent      Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId, sent, remindAt])
+  @@index([sent, remindAt])
 }
 
 model Habit {
@@ -79,6 +86,8 @@ model Habit {
   frequency HabitFrequency @default(DAILY)
   createdAt DateTime       @default(now())
   logs      HabitLog[]
+
+  @@index([userId])
 }
 
 enum HabitFrequency {
@@ -92,6 +101,8 @@ model HabitLog {
   habit     Habit    @relation(fields: [habitId], references: [id])
   date      DateTime
   completed Boolean  @default(true)
+
+  @@index([habitId, date])
 }
 
 model PomodoroSession {
@@ -102,6 +113,8 @@ model PomodoroSession {
   startedAt   DateTime      @default(now())
   completedAt DateTime?
   status      SessionStatus @default(IN_PROGRESS)
+
+  @@index([userId, status])
 }
 
 enum SessionStatus {
@@ -126,6 +139,8 @@ model XPLog {
   amount    Int
   reason    String
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Badge {
@@ -187,6 +202,8 @@ model CommunityChallenge {
   startsAt     DateTime
   endsAt       DateTime
   participants ChallengeParticipant[]
+
+  @@index([guildId, endsAt])
 }
 
 model ChallengeParticipant {
