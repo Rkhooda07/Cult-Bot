@@ -48,10 +48,11 @@ async function renderPanel(
   const userId = interaction.user.id;
   const username = interaction.user.username;
 
-  await ensureUser(userId, username);
-
-  const data = await getTodosPaginated(userId, page);
-  const stats = await getTodoStats(userId);
+  const [, data, stats] = await Promise.all([
+    ensureUser(userId, username),
+    getTodosPaginated(userId, page),
+    getTodoStats(userId),
+  ]);
 
   const { embed, components } = createTodoEmbed(userId, username, data, stats);
 
@@ -161,10 +162,11 @@ buttonHandlers.set("todo:delete", async (interaction: ButtonInteraction) => {
 });
 
 buttonHandlers.set("todo:complete", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const incompleteTodos = await getIncompleteTodos(interaction.user.id);
 
   if (incompleteTodos.length === 0) {
-    await interaction.reply({ embeds: [createErrorEmbed("No incomplete todos to complete.")], flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ embeds: [createErrorEmbed("No incomplete todos to complete.")], components: [] });
     return;
   }
 
@@ -173,7 +175,7 @@ buttonHandlers.set("todo:complete", async (interaction: ButtonInteraction) => {
     if (success) {
       await renderPanel(interaction, 1);
     } else {
-      await interaction.reply({ embeds: [createErrorEmbed("Failed to complete todo.")], flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ embeds: [createErrorEmbed("Failed to complete todo.")], components: [] });
     }
     return;
   }
@@ -193,7 +195,7 @@ buttonHandlers.set("todo:complete", async (interaction: ButtonInteraction) => {
 
   const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
-  await interaction.reply({ components: [row], flags: MessageFlags.Ephemeral });
+  await interaction.editReply({ embeds: [], components: [row] });
 });
 
 buttonHandlers.set("todo:page", async (interaction: ButtonInteraction) => {

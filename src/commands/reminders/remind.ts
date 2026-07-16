@@ -46,10 +46,11 @@ async function renderPanel(
   const userId = interaction.user.id;
   const username = interaction.user.username;
 
-  await ensureUser(userId, username);
-
-  const data = await getRemindersPaginated(userId, page);
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const [, data, user] = await Promise.all([
+    ensureUser(userId, username),
+    getRemindersPaginated(userId, page),
+    prisma.user.findUnique({ where: { id: userId } }),
+  ]);
   const timezone = user?.timezone || "UTC";
 
   const { embed, components } = createReminderEmbed(username, data, timezone);
@@ -95,13 +96,18 @@ commands.set("remind", {
         return;
       }
 
-      await ensureUser(interaction.user.id, interaction.user.username);
+      const [, user] = await Promise.all([
+        ensureUser(interaction.user.id, interaction.user.username),
+        prisma.user.findUnique({ where: { id: interaction.user.id } }),
+      ]);
+      const timezone = user?.timezone || "UTC";
 
       const result = await createReminder(
         interaction.user.id,
         interaction.channelId,
         messageResult.data,
-        timeResult.data
+        timeResult.data,
+        timezone
       );
 
       if ("error" in result) {
@@ -109,8 +115,6 @@ commands.set("remind", {
         return;
       }
 
-      const user = await prisma.user.findUnique({ where: { id: interaction.user.id } });
-      const timezone = user?.timezone || "UTC";
       const timeStr = formatReminderTime(result.parsedTime, timezone);
 
       await interaction.editReply({
@@ -138,14 +142,16 @@ buttonHandlers.set("remind:add", async (interaction: ButtonInteraction) => {
 
 buttonHandlers.set("remind:cancel", async (interaction: ButtonInteraction) => {
   await interaction.deferUpdate();
-  const reminders = await getAllUpcomingReminders(interaction.user.id);
+  const [reminders, user] = await Promise.all([
+    getAllUpcomingReminders(interaction.user.id),
+    prisma.user.findUnique({ where: { id: interaction.user.id } }),
+  ]);
 
   if (reminders.length === 0) {
     await interaction.editReply({ embeds: [createErrorEmbed("No upcoming reminders to cancel.")], components: [] });
     return;
   }
 
-  const user = await prisma.user.findUnique({ where: { id: interaction.user.id } });
   const timezone = user?.timezone || "UTC";
 
   const selectMenu = createCancelSelectMenu(interaction.user.id, reminders, timezone);
@@ -195,7 +201,10 @@ modalHandlers.set("remind:add", async (interaction: ModalSubmitInteraction) => {
     return;
   }
 
-  await ensureUser(interaction.user.id, interaction.user.username);
+  const [, user] = await Promise.all([
+    ensureUser(interaction.user.id, interaction.user.username),
+    prisma.user.findUnique({ where: { id: interaction.user.id } }),
+  ]);
 
   const channelId = interaction.channelId || interaction.user.id;
 
@@ -203,7 +212,8 @@ modalHandlers.set("remind:add", async (interaction: ModalSubmitInteraction) => {
     interaction.user.id,
     channelId,
     messageResult.data,
-    timeResult.data
+    timeResult.data,
+    user?.timezone || "UTC"
   );
 
   if ("error" in result) {

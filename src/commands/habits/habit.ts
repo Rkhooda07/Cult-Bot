@@ -42,9 +42,10 @@ async function renderPanel(
   const userId = interaction.user.id;
   const username = interaction.user.username;
 
-  await ensureUser(userId, username);
-
-  const habits = await listHabits(userId);
+  const [, habits] = await Promise.all([
+    ensureUser(userId, username),
+    listHabits(userId),
+  ]);
   const { embed, components } = buildPanelEmbed(userId, username, habits);
 
   if (interaction.replied || interaction.deferred) {
@@ -198,18 +199,17 @@ selectHandlers.set("habit:setFreq", async (interaction: StringSelectMenuInteract
 // ─── Button: habit:checkoff — single habit auto-checks, multiple shows select ─
 
 buttonHandlers.set("habit:checkoff", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const userId = interaction.user.id;
   const habits = await listHabits(userId);
   const pending = habits.filter((h) => !h.completedToday);
 
   if (pending.length === 1) {
-    await interaction.deferUpdate();
     await toggleHabitToday(userId, pending[0].id);
     await renderPanel(interaction);
     return;
   }
 
-  await interaction.deferUpdate();
   if (pending.length === 0) {
     await interaction.editReply({
       embeds: [createErrorEmbed("All habits are already checked off for today! 🎉")],
@@ -254,11 +254,11 @@ selectHandlers.set("habit:doCheckoff", async (interaction: StringSelectMenuInter
 // ─── Button: habit:delete ────────────────────────────────────────────────────
 
 buttonHandlers.set("habit:delete", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const userId = interaction.user.id;
   const habits = await listHabits(userId);
 
   if (habits.length === 1) {
-    await interaction.deferUpdate();
     // Single habit: confirm before deleting
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -280,7 +280,6 @@ buttonHandlers.set("habit:delete", async (interaction: ButtonInteraction) => {
     return;
   }
 
-  await interaction.deferUpdate();
   if (habits.length === 0) {
     await interaction.editReply({
       embeds: [createErrorEmbed("You have no habits to delete.")],

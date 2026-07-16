@@ -295,24 +295,26 @@ modalHandlers.set("challenge:create", async (interaction: ModalSubmitInteraction
     return;
   }
 
+  // DB writes + a Discord message fetch/send follow — defer now that all
+  // synchronous validation has passed, so the ack lands well inside 3s.
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
   try {
     const challenge = await createChallenge(interaction.guildId, title, description, endsAt);
 
     await sendOrUpdateAnnouncement(challenge.id, interaction.guildId);
 
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [
         createEmbed("xp")
           .setTitle("✅ Challenge Created!")
           .setDescription(`**${challenge.title}** has been posted to the announcements channel.`),
       ],
-      flags: MessageFlags.Ephemeral,
     });
   } catch (error) {
     logger.error({ err: error }, "Failed to create challenge");
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [createErrorEmbed("Failed to create challenge. Please try again.")],
-      flags: MessageFlags.Ephemeral,
     });
   }
 });
@@ -329,19 +331,22 @@ buttonHandlers.set("challenge:join", async (interaction: ButtonInteraction) => {
     return;
   }
 
+  // This is a fresh ephemeral reply to the clicking user (the button's own
+  // message is a separate public announcement) — defer it now since DB work
+  // and a channel message fetch/send follow.
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
   const challenge = await getChallenge(challengeId);
   if (!challenge) {
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [createErrorEmbed("Challenge not found or has ended.")],
-      flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
   if (challenge.endsAt < new Date()) {
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [createErrorEmbed("This challenge has already ended.")],
-      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -349,21 +354,19 @@ buttonHandlers.set("challenge:join", async (interaction: ButtonInteraction) => {
   const joined = await joinChallenge(challengeId, interaction.user.id);
 
   if (!joined) {
-    await interaction.reply({
+    await interaction.editReply({
       embeds: [createErrorEmbed("You've already joined this challenge!")],
-      flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
   await sendOrUpdateAnnouncement(challengeId, interaction.guildId);
 
-  await interaction.reply({
+  await interaction.editReply({
     embeds: [
       createEmbed("xp")
         .setTitle("🏁 Joined Challenge!")
         .setDescription(`You've joined **${challenge.title}**. Good luck!`),
     ],
-    flags: MessageFlags.Ephemeral,
   });
 });

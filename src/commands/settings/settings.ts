@@ -289,17 +289,18 @@ commands.set("timezone", {
 });
 
 selectHandlers.set("settings:timezone", async (interaction: StringSelectMenuInteraction) => {
+  await interaction.deferUpdate();
   const tz = interaction.values[0];
 
   await ensureUser(interaction.user.id, interaction.user.username);
   const success = await setUserTimezone(interaction.user.id, tz);
 
   if (success) {
-    await interaction.update({
+    await interaction.editReply({
       embeds: [createEmbed("settings").setTitle("✅ Timezone Updated").setDescription(`Your timezone is now **${tz}**.`)],
       components: [],
     });
   } else {
-    await interaction.update({ embeds: [createErrorEmbed("Failed to update timezone.")], components: [] });
+    await interaction.editReply({ embeds: [createErrorEmbed("Failed to update timezone.")], components: [] });
   }
 });

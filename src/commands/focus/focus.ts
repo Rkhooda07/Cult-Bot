@@ -35,10 +35,11 @@ async function handleFocusStart(interaction: ChatInputCommandInteraction): Promi
   const userId = interaction.user.id;
   const minutes = interaction.options.getInteger("minutes") || 25;
 
-  await ensureUser(userId, interaction.user.username);
-
   // Check for existing active session
-  const existing = await getActiveSession(userId);
+  const [, existing] = await Promise.all([
+    ensureUser(userId, interaction.user.username),
+    getActiveSession(userId),
+  ]);
   if (existing) {
     const embed = createEmbed("error").setTitle("Session in progress").setDescription(`You already have a focus session running (started <t:${Math.floor(existing.startedAt.getTime() / 1000)}:R>). Use \`/focus stop\` to end it.`);
     await interaction.editReply({ embeds: [embed] });
@@ -101,13 +102,14 @@ function buildCompleteButton(userId: string, sessionId: string): ActionRowBuilde
 
 // Button handler: focus:complete
 buttonHandlers.set("focus:complete", async (interaction) => {
+  await interaction.deferUpdate();
   const { ownerId, entityId } = decodeCustomId(interaction.customId);
   if (ownerId !== interaction.user.id) return; // Router already guards, but double-check
 
   const completed = await completeSession(entityId, ownerId);
   if (!completed) {
     const embed = createEmbed("error").setTitle("Already finished").setDescription("This session was already completed or stopped.");
-    await interaction.update({ embeds: [embed], components: [] });
+    await interaction.editReply({ embeds: [embed], components: [] });
     return;
   }
 
@@ -119,7 +121,7 @@ buttonHandlers.set("focus:complete", async (interaction) => {
     .setDescription(`Great job! You earned **+25 XP**.\nTotal XP: **${xpResult.newXP}** (Level ${xpResult.newLevel})`)
     .setFooter({ text: `DevOS • ${interaction.user.username}` });
 
-  await interaction.update({ embeds: [embed], components: [] });
+  await interaction.editReply({ embeds: [embed], components: [] });
 
   if (xpResult.leveledUp) {
     const levelUpEmbed = createEmbed("xp")

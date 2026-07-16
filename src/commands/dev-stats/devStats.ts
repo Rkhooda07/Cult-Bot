@@ -3,7 +3,6 @@ import { commands } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
 import { prisma } from "../../database/prisma";
-import { ensureUser } from "../../services/reminderService";
 import { getCommitsToday, fetchContributionCalendar } from "../../services/githubService";
 import { getSolvesToday as getLeetcodeSolvesToday } from "../../services/leetcodeService";
 import { fetchSolvedToday as getCodeforcesSolvesToday } from "../../services/codeforcesService";
@@ -38,10 +37,11 @@ commands.set("dev-stats", {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
-      await ensureUser(interaction.user.id, interaction.user.username);
-
-      const user = await prisma.user.findUnique({
+      // Upsert-with-include in one round trip instead of ensureUser() + a separate findUnique.
+      const user = await prisma.user.upsert({
         where: { id: interaction.user.id },
+        update: { username: interaction.user.username },
+        create: { id: interaction.user.id, username: interaction.user.username },
         include: { githubLink: true, leetcodeLink: true, codeforcesLink: true },
       });
 

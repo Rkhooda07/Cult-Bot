@@ -21,16 +21,11 @@ commands.set("badges", {
       create: { id: userId, username },
     });
 
-    // Fetch all seeded badges from the database
-    const allBadges = await prisma.badge.findMany({
-      orderBy: { name: "asc" },
-    });
-
-    // Fetch the user's earned badges
-    const userBadges = await prisma.userBadge.findMany({
-      where: { userId },
-      include: { badge: true },
-    });
+    // Fetch all seeded badges and the user's earned badges in parallel — independent reads.
+    const [allBadges, userBadges] = await Promise.all([
+      prisma.badge.findMany({ orderBy: { name: "asc" } }),
+      prisma.userBadge.findMany({ where: { userId }, include: { badge: true } }),
+    ]);
 
     const earnedKeys = new Set(userBadges.map((ub) => ub.badge.key));
 

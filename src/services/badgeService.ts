@@ -20,19 +20,14 @@ export interface EarnedBadgeInfo {
  */
 export async function evaluate(userId: string): Promise<EarnedBadgeInfo[]> {
   try {
-    // 1. Fetch user stats
-    const goalsCompleted = await prisma.goal.count({
-      where: { userId, status: "COMPLETED" },
-    });
-
-    const streak = await prisma.streak.findUnique({
-      where: { userId },
-    });
+    // 1. Fetch user stats + already-earned badges — four independent reads.
+    const [goalsCompleted, streak, tasksCompleted, earnedUserBadges] = await Promise.all([
+      prisma.goal.count({ where: { userId, status: "COMPLETED" } }),
+      prisma.streak.findUnique({ where: { userId } }),
+      prisma.todo.count({ where: { userId, done: true } }),
+      prisma.userBadge.findMany({ where: { userId }, include: { badge: true } }),
+    ]);
     const bestStreak = streak ? streak.best : 0;
-
-    const tasksCompleted = await prisma.todo.count({
-      where: { userId, done: true },
-    });
 
     const stats: UserStats = {
       goalsCompleted,
@@ -40,11 +35,6 @@ export async function evaluate(userId: string): Promise<EarnedBadgeInfo[]> {
       tasksCompleted,
     };
 
-    // 2. Fetch already earned badges
-    const earnedUserBadges = await prisma.userBadge.findMany({
-      where: { userId },
-      include: { badge: true },
-    });
     const earnedKeys = new Set(earnedUserBadges.map((ub) => ub.badge.key));
 
     const newlyEarned: EarnedBadgeInfo[] = [];

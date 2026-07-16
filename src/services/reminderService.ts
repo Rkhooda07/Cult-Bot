@@ -41,11 +41,9 @@ export async function createReminder(
   userId: string,
   channelId: string,
   message: string,
-  timeInput: string
+  timeInput: string,
+  timezone = "UTC"
 ): Promise<{ reminder: ReminderItem; parsedTime: Date } | { error: string }> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  const timezone = user?.timezone || "UTC";
-
   const results = chrono.parse(timeInput.trim(), DateTime.now().setZone(timezone).toJSDate(), {
     forwardDate: true,
   });

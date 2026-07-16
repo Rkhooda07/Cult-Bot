@@ -53,9 +53,10 @@ async function renderPanel(
   const userId = interaction.user.id;
   const username = interaction.user.username;
 
-  await ensureUser(userId, username);
-
-  const data = await getGoalsPaginated(userId, page);
+  const [, data] = await Promise.all([
+    ensureUser(userId, username),
+    getGoalsPaginated(userId, page),
+  ]);
   const { embed, components } = createGoalEmbed(username, data);
 
   const finalComponents = buildActionRowsWithUserId(userId, data);
@@ -105,16 +106,15 @@ buttonHandlers.set("goal:progress", async (interaction: ButtonInteraction) => {
 });
 
 buttonHandlers.set("goal:complete", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const inProgressGoals = await getInProgressGoals(interaction.user.id);
 
   if (inProgressGoals.length === 1) {
-    await interaction.deferUpdate();
     await completeGoal(interaction.user.id, inProgressGoals[0].id);
     await renderPanel(interaction, 1);
     return;
   }
 
-  await interaction.deferUpdate();
   if (inProgressGoals.length === 0) {
     await interaction.editReply({ embeds: [createErrorEmbed("No in-progress goals to complete.")], components: [] });
     return;
@@ -125,16 +125,15 @@ buttonHandlers.set("goal:complete", async (interaction: ButtonInteraction) => {
 });
 
 buttonHandlers.set("goal:abandon", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const inProgressGoals = await getInProgressGoals(interaction.user.id);
 
   if (inProgressGoals.length === 1) {
-    await interaction.deferUpdate();
     await abandonGoal(interaction.user.id, inProgressGoals[0].id);
     await renderPanel(interaction, 1);
     return;
   }
 
-  await interaction.deferUpdate();
   if (inProgressGoals.length === 0) {
     await interaction.editReply({ embeds: [createErrorEmbed("No in-progress goals to abandon.")], components: [] });
     return;
@@ -145,10 +144,10 @@ buttonHandlers.set("goal:abandon", async (interaction: ButtonInteraction) => {
 });
 
 buttonHandlers.set("goal:delete", async (interaction: ButtonInteraction) => {
+  await interaction.deferUpdate();
   const goals = await getAllGoals(interaction.user.id);
 
   if (goals.length === 1) {
-    await interaction.deferUpdate();
     const customId = encode("goal", "confirmDelete", interaction.user.id, goals[0].id);
     const confirmRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -169,7 +168,6 @@ buttonHandlers.set("goal:delete", async (interaction: ButtonInteraction) => {
     return;
   }
 
-  await interaction.deferUpdate();
   if (goals.length === 0) {
     await interaction.editReply({ embeds: [createErrorEmbed("No goals to delete.")], components: [] });
     return;
