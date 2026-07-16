@@ -62,7 +62,7 @@ async function handleFocusStop(interaction: ChatInputCommandInteraction): Promis
     return;
   }
 
-  const abandoned = await abandonSession(userId, active.id);
+  const abandoned = await abandonSession(active.id, userId);
   if (!abandoned) {
     const embed = createEmbed("error").setTitle("Failed to stop").setDescription("Could not stop the session (already completed?).");
     await interaction.editReply({ embeds: [embed] });
@@ -104,7 +104,7 @@ buttonHandlers.set("focus:complete", async (interaction) => {
   const { ownerId, entityId } = decodeCustomId(interaction.customId);
   if (ownerId !== interaction.user.id) return; // Router already guards, but double-check
 
-  const completed = await completeSession(ownerId, entityId);
+  const completed = await completeSession(entityId, ownerId);
   if (!completed) {
     const embed = createEmbed("error").setTitle("Already finished").setDescription("This session was already completed or stopped.");
     await interaction.update({ embeds: [embed], components: [] });
