@@ -52,6 +52,18 @@ async function main() {
   registerReadyEvent(client);
   registerInteractionCreate(client);
   logTiming("startup:client+events setup", stop());
+
+  // Fire a trivial query now, in parallel with the gateway handshake below,
+  // so a serverless DB (e.g. Neon) that auto-suspended on idle starts its
+  // cold-start "wake" immediately instead of on the first real interaction.
+  // Not awaited — must never block or fail startup.
+  import("./database/prisma").then(({ prisma }) => {
+    const dbStop = startTimer();
+    prisma.$queryRaw`SELECT 1`
+      .then(() => logTiming("startup:db warm-up query", dbStop()))
+      .catch((err) => logger.warn({ err }, "DB warm-up query failed (non-fatal)"));
+  });
+
   stop = startTimer();
 
   // Start reminder poller (runs every 60s)
@@ -77,6 +89,11 @@ async function main() {
   // Start Weekly Recap cron job (runs every hour)
   const { startWeeklyRecap } = await import("./cron/weeklyRecap");
   startWeeklyRecap(client);
+
+  // Keep the DB connection warm so serverless Postgres (e.g. Neon) never
+  // auto-suspends while the bot is running (see src/cron/dbKeepAlive.ts).
+  const { startDbKeepAlive } = await import("./cron/dbKeepAlive");
+  startDbKeepAlive();
   logTiming("startup:cron jobs registered", stop());
 
   stop = startTimer();
