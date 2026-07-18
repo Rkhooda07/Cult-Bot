@@ -250,44 +250,6 @@ commands.set("settings", {
   },
 });
 
-commands.set("timezone", {
-  data: new SlashCommandBuilder()
-    .setName("timezone")
-    .setDescription("Set your timezone (alias for /settings timezone)")
-    .addStringOption((opt) =>
-      opt.setName("timezone").setDescription("IANA timezone (e.g., America/New_York)").setRequired(true).setAutocomplete(true)
-    ) as unknown as SlashCommandBuilder,
-
-  execute: async (interaction: ChatInputCommandInteraction) => {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const tz = interaction.options.getString("timezone", true);
-    const result = timezoneSchema.safeParse(tz);
-
-    if (!result.success) {
-      await interaction.editReply({ embeds: [createErrorEmbed("Invalid timezone format.")] });
-      return;
-    }
-
-    if (!isValidIANATimezone(tz)) {
-      await interaction.editReply({
-        embeds: [createErrorEmbed(`Invalid timezone: **${tz}**. Use an IANA timezone like \`America/New_York\` or \`Europe/London\`.`)],
-      });
-      return;
-    }
-
-    await ensureUser(interaction.user.id, interaction.user.username);
-    const success = await setUserTimezone(interaction.user.id, tz);
-
-    if (success) {
-      await interaction.editReply({
-        embeds: [createEmbed("settings").setTitle("✅ Timezone Updated").setDescription(`Your timezone is now **${tz}**.`)],
-      });
-    } else {
-      await interaction.editReply({ embeds: [createErrorEmbed("Failed to update timezone.")] });
-    }
-  },
-});
-
 selectHandlers.set("settings:timezone", async (interaction: StringSelectMenuInteraction) => {
   await interaction.deferUpdate();
   const tz = interaction.values[0];
