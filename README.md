@@ -1,125 +1,171 @@
-# DevOS — Developer Productivity Discord Bot
+<div align="center">
 
-A developer-first productivity operating system inside Discord — todos, goals, focus sessions, streaks, and XP, all driven by embeds and buttons instead of typed commands.
+![NerdCult](src/assets/nerdcult-wordmark.png)
 
-## Features (across all phases)
+**Turn your Discord server into a developer productivity operating system.**
 
-- **Todos** — add/complete/edit/delete via buttons and modals, never typed sub-commands
-- **Goals** — track progress with `[0%──────] 0%` progress bars
-- **Reminders** — natural language (`/remind tomorrow 8am Gym`) via chrono-node
-- **Focus / Pomodoro** — timed work sessions with XP rewards
-- **Streaks & Stats** — daily activity streaks with a server-wide streak view, derived productivity score
-- **XP & Levels** — quadratic formula `xpForLevel(n) = 50n²`
-- **Badges** — declarative registry, auto-evaluated after every XP event
-- **Habits** — daily/weekly habit logging via button panels
-- **Integrations** — GitHub commits, LeetCode solves, Codeforces rating polled every 15 min
-- **Leaderboard & Challenges** — guild-scoped, public embeds
+![License](https://img.shields.io/badge/license-TBD-lightgrey)
+![Node](https://img.shields.io/badge/node-22%2B-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-Postgres-2D3748?logo=prisma&logoColor=white)
+
+</div>
+
+---
+
+## What is this?
+
+**DevOS** is a developer-first productivity bot for Discord. It gives each member their own todos, goals, reminders, focus sessions, streaks, XP, and dev-account integrations, then layers a public, guild-scoped social surface on top — leaderboards, a shared completion board, and community challenges. Every interaction is driven by **buttons, select menus, and modals** rather than typed sub-commands, and the whole thing is gamified with XP, levels, and auto-awarded badges.
+
+---
+
+## Screenshots
+
+> 📸 Add a screenshot of the `/todo` panel here
+>
+> 📸 Add a screenshot of the `/dev-stats` rendered contribution graph here
+>
+> 📸 Add a screenshot of the `/leaderboard` embed here
+
+---
+
+## Features
+
+### Personal productivity
+- **Todos** (`/todo`) — a button/modal panel to add, complete, edit, and delete tasks.
+- **Goals** (`/goal`) — track progress with rendered progress bars.
+- **Reminders** (`/remind`) — natural-language scheduling (e.g. *tomorrow 8am Gym*) via `chrono-node`, polled and delivered on time.
+- **Today** (`/today`) — a single overview of open todos, upcoming reminders, and goal progress.
+
+### Focus & streaks
+- **Focus sessions** (`/focus`) — start/stop Pomodoro-style timed work sessions that award XP on completion.
+- **Streaks** (`/streak`) — your current and best productivity streaks, plus a server-wide streak view.
+
+### XP & badges
+- **Levels** (`/level`) — current level and an XP progress bar.
+- **Stats** (`/stats`) — overall productivity stats and a derived Productivity Score.
+- **Badges** (`/badges`) — earned and locked badges from a declarative registry, evaluated after every XP event.
+
+### Dev integrations (GitHub · LeetCode · Codeforces)
+- **Link accounts** (`/link`) — connect GitHub, LeetCode, and Codeforces to earn XP from real activity.
+- **Combined dev stats** (`/dev-stats`) — today's activity across all three, including a **rendered GitHub contribution graph** (via `@napi-rs/canvas`) and **private-activity detection** so private-repo contributions still count.
+- **Activity broadcasts** — notable dev activity is celebrated in shared guilds via the broadcast system.
+
+### Community
+- **Leaderboard** (`/leaderboard`) — guild top 10 by XP, with per-user current and best streaks.
+- **Board** (`/board`) — a public, paginated server-wide todo completion board.
+- **Challenges** (`/challenge`) — admin-created community challenges members can complete.
+- **Settings** (`/settings`) — per-user settings, including timezone and opt-in/opt-out of public surfaces.
+
+---
+
+## Tech stack
+
+- **Language:** TypeScript (strict)
+- **Runtime:** Node.js 22
+- **Discord:** [discord.js](https://discord.js.org/) v14
+- **Database:** PostgreSQL 16 via [Prisma](https://www.prisma.io/) ORM
+- **Scheduling:** `node-cron` (reminder delivery, integration polling, streak checks, weekly recap)
+- **Validation:** `zod` on every command option and modal submit
+- **Dates:** `luxon` + `chrono-node`
+- **Rendering:** `@napi-rs/canvas` for contribution graphs
+- **Logging:** `pino` (+ `pino-pretty` in dev)
+- **Deployment:** Docker + Docker Compose (bot + Postgres)
 
 ---
 
 ## Setup
 
-### Prerequisites
+Detailed design and behavioral spec lives in [`docs/discord-bot-implementation-spec.md`](docs/discord-bot-implementation-spec.md). The steps below are the condensed path from clone to running bot.
 
+### Prerequisites
 - Node.js 22+
 - Docker & Docker Compose (for Postgres)
-- A Discord application with a bot token ([Discord Developer Portal](https://discord.com/developers/applications))
+- A Discord application + bot token from the [Discord Developer Portal](https://discord.com/developers/applications)
 
-### 1. Clone & install
+### Steps
 
 ```bash
+# 1. Clone & install
 git clone <repo-url>
 cd devos-bot
 npm install
-```
 
-### 2. Configure environment
+# 2. Configure environment
+cp .env.example .env    # then fill in the values (see table below)
 
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and fill in:
-
-| Variable | Description |
-|---|---|
-| `DISCORD_TOKEN` | Bot token from the Discord Developer Portal |
-| `DISCORD_CLIENT_ID` | Application ID from the Developer Portal |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `GITHUB_TOKEN` | *(optional)* Personal access token — raises GitHub API rate limits for the poller |
-
-### 3. Enable privileged intents in the Discord Developer Portal
-
-> **Important:** The bot uses the **Server Members Intent** (`GuildMembers`) to find which guilds a user shares with the bot — required for the activity broadcast system.
->
-> In the [Developer Portal](https://discord.com/developers/applications) → your app → **Bot** → **Privileged Gateway Intents**, enable **Server Members Intent**.
->
-> Without this, the bot will start but activity broadcasts will silently fail (zero shared guilds found).
-
-### 4. Run Postgres
-
-```bash
+# 3. Start Postgres (or point DATABASE_URL at any Postgres 14+ instance)
 docker-compose up postgres -d
-```
 
-Or use any Postgres 14+ instance and set `DATABASE_URL` accordingly.
-
-### 5. Run migrations & generate Prisma client
-
-```bash
+# 4. Apply migrations & generate the Prisma client
 npx prisma migrate deploy
 npx prisma generate
-```
 
-### 6. Build & start
+# 5. Seed baseline data (badges, etc.)
+npm run db:seed
 
-```bash
-npm run build
-npm start
-```
-
-Or in development (no build step):
-
-```bash
-npm run dev
-```
-
-You should see:
-
-```
-Bot ready
-```
-
-### 7. Deploy slash commands
-
-Register the bot's slash commands with Discord (run once, and again whenever a
-command's definition changes):
-
-```bash
+# 6. Register slash commands with Discord (re-run when a command changes)
 npm run deploy
+
+# 7. Run the bot
+npm run dev      # development (ts-node, no build)
+# — or —
+npm run build && npm start
 ```
 
----
+> **Privileged intent:** enable the **Server Members Intent** in the Developer Portal (Bot → Privileged Gateway Intents). Without it the bot boots, but activity broadcasts silently find zero shared guilds.
 
-## Docker (full stack) — recommended
-
-From a fresh clone, with `.env` filled in:
+### Full stack via Docker
 
 ```bash
 docker-compose up --build
 ```
 
-This starts `postgres` + `bot`. The `bot` container runs `npx prisma migrate deploy`
-automatically on startup (see the `command:` in `docker-compose.yml`) before booting,
-so **there are zero manual database steps** — no separate migrate/generate needed.
-Postgres data persists in the `postgres_data` volume across restarts.
+Starts `postgres` + `bot`. The `bot` container runs `prisma migrate deploy` on startup automatically, so there are no manual DB steps. You still need to run `npm run deploy` once to register slash commands (it needs your bot token).
 
-The only step Docker can't do for you is registering slash commands with Discord's
-API (it needs your bot token). Run that once against the same `.env`:
+A recent performance pass reduced startup and interaction latency (early `deferReply`, parallelized independent DB reads, added indexes on hot foreign keys, and hardened against serverless-Postgres cold starts).
 
-```bash
-npm run deploy
-```
+---
+
+## Environment variables
+
+Read from [`src/config/env.ts`](src/config/env.ts) and validated with `zod` at boot — the process fails fast if a required variable is missing.
+
+| Variable | Required | Description |
+|---|---|---|
+| `DISCORD_TOKEN` | ✅ | Bot token from the Discord Developer Portal. |
+| `DISCORD_CLIENT_ID` | ✅ | Application (client) ID from the Developer Portal. |
+| `DATABASE_URL` | ✅ | PostgreSQL connection string. |
+| `GITHUB_TOKEN` | — | Optional. Raises GitHub API rate limits for the activity poller. |
+| `BOT_ICON_URL` | — | Optional. Public `raw.githubusercontent.com` URL to the committed bot icon, shown in embed footers. Only resolves once the repo is pushed public; safely ignored when unset. |
+| `AUTO_SET_AVATAR` | — | Optional. When exactly `"true"`, the bot sets its own avatar once on startup. Off by default; never retried (Discord rate-limits avatar changes). Uploading the icon manually via the Developer Portal is the recommended path. |
+
+---
+
+## Command reference
+
+Every command is a single entry point; the rest of each flow is buttons, select menus, and modals.
+
+| Command | Description |
+|---|---|
+| `/todo` | Open your personal todo panel. |
+| `/goal` | Open your personal goal panel. |
+| `/habit` | Open your personal habit panel. |
+| `/remind` | Set a reminder or list upcoming reminders. |
+| `/today` | Show today's overview: open todos, reminders, and goal progress. |
+| `/focus` | Start or stop a Pomodoro focus session. |
+| `/streak` | View your current and best productivity streaks. |
+| `/stats` | View your overall productivity stats and Productivity Score. |
+| `/level` | View your current level and XP progress bar. |
+| `/badges` | View your earned and locked productivity badges. |
+| `/link` | Link an external dev account (GitHub / LeetCode / Codeforces) to earn XP. |
+| `/dev-stats` | Your combined dev activity today across GitHub, LeetCode, and Codeforces. |
+| `/leaderboard` | View the guild leaderboard (top 10 by XP). |
+| `/board` | View the server todo completion board (shared public view). |
+| `/challenge` | Community challenges — `create` (admin) and `complete` subcommands. |
+| `/settings` | Manage your user settings. |
+| `/ping` | Verify the bot is online — returns latency and a router test button. |
 
 ---
 
@@ -127,20 +173,22 @@ npm run deploy
 
 ```
 src/
-  commands/          # one folder per domain (todo, goals, reminders, …)
+  commands/          # one folder per command (todo, goal, board, dev-stats, …)
   events/
-    ready.ts         # fires on login
-    interactionCreate.ts  # global router — parses customId, dispatches handlers
-  services/          # business logic (todoService, xpService, …)
+    ready.ts         # fires on login (optional one-shot avatar set)
+    interactionCreate.ts  # global router — parses customId, verifies ownership, dispatches
+  services/          # business logic (todoService, xpService, broadcastService, …)
   database/
     prisma.ts        # singleton PrismaClient
-  utils/             # progressBar, customId encode/decode, embedFactory, …
+  utils/             # progress bars, customId encode/decode, embedFactory, …
   embeds/            # per-domain embed builders
   badges/
     registry.ts      # declarative badge rules
-  cron/              # reminder poller, daily reset, streak check, …
+  cron/              # reminder poller, GitHub poller, streak check, weekly recap
   config/
-    env.ts           # zod-validated env vars — fails fast on boot if missing
+    env.ts           # zod-validated env vars — fails fast on boot
+    branding.ts      # icon paths / URL wiring
+  assets/            # brand assets (icon + wordmark)
   index.ts           # entry point
 prisma/
   schema.prisma
@@ -152,7 +200,21 @@ Dockerfile
 
 ## Conventions
 
-- **One slash command per domain.** `/todo`, `/goal`, `/habit`, etc. are single entry points. Everything after is a button, select menu, or modal.
-- **customId format:** `domain:action:ownerId:entityId` — the router verifies ownership before dispatching.
-- **All replies are embeds.** No bare string replies ever ship.
-- **Personal data is ephemeral; social data is public.**
+- **One slash command per domain** — everything after the entry point is a component interaction.
+- **customId format** `domain:action:ownerId:entityId` — the router verifies ownership before dispatching.
+- **All replies are embeds** — no bare-string replies.
+- **Personal data is ephemeral; social data is public** — subject to opt-in/opt-out settings.
+
+---
+
+## License
+
+<div align="center">
+
+<img src="src/assets/nerdcult-icon-512.png" width="48" alt="NerdCult" />
+
+**License: TBD** — no license file is present in this repository yet.
+
+<sub>Built with TypeScript, discord.js, and Prisma.</sub>
+
+</div>
