@@ -7,6 +7,9 @@ import { logger } from "../utils/logger";
 
 export const habitNameSchema = z.string().min(1).max(100).trim();
 
+/** XP awarded for checking a habit off — and reversed on un-check (see toggleHabitToday). */
+export const HABIT_XP = 5;
+
 export type HabitFrequency = "DAILY" | "WEEKLY";
 
 export interface HabitItem {
@@ -100,13 +103,25 @@ export async function toggleHabitToday(
   });
 
   if (existingLog) {
-    // Un-check: remove the log entry
+    // Un-check: remove the log AND reverse the XP the check-off awarded, so a
+    // check → uncheck cycle nets to exactly zero and can't be farmed for free
+    // XP (a negative XPLog row keeps the ledger auditable).
+    //
+    // We intentionally do NOT revert the streak here. The streak is a shared
+    // "was active today" OR-signal fed by todos, goals, focus and habits alike,
+    // so this habit may not be what earned it — and cycling can't inflate it
+    // anyway: once today is marked active, updateStreak's `diff <= 0` branch
+    // only refreshes the timestamp and leaves `current` unchanged. Naively
+    // decrementing here would corrupt a streak legitimately earned elsewhere.
     await prisma.habitLog.delete({ where: { id: existingLog.id } });
-    logger.info({ userId, habitId }, "Habit un-checked for today");
+    await award(userId, -HABIT_XP, "habit_unchecked");
+    logger.info({ userId, habitId }, `Habit un-checked for today, -${HABIT_XP} XP reversed`);
     return false;
   }
 
-  // Check off: create log, award XP, update streak
+  // Check off: create log, award XP, update streak. The findFirst guard above
+  // guarantees no log exists for today, so this awards at most once per habit
+  // per day — repeated checking can never double-award.
   await prisma.habitLog.create({
     data: {
       habitId,
@@ -116,9 +131,9 @@ export async function toggleHabitToday(
   });
 
   await updateStreak(userId);
-  await award(userId, 5, "habit_logged");
+  await award(userId, HABIT_XP, "habit_logged");
 
-  logger.info({ userId, habitId }, "Habit checked off for today, +5 XP");
+  logger.info({ userId, habitId }, `Habit checked off for today, +${HABIT_XP} XP`);
   return true;
 }
 
