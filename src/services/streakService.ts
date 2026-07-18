@@ -1,6 +1,7 @@
 import { prisma } from "../database/prisma";
 import { DateTime } from "luxon";
 import { logger } from "../utils/logger";
+import { getClient } from "../utils/client";
 
 export interface StreakItem {
   id: string;
@@ -8,6 +9,13 @@ export interface StreakItem {
   current: number;
   best: number;
   lastActiveDate: Date | null;
+}
+
+export interface GuildStreakEntry {
+  userId: string;
+  username: string;
+  current: number;
+  best: number;
 }
 
 /**
@@ -131,4 +139,33 @@ export async function getStreak(userId: string): Promise<StreakItem> {
     best: streak.best,
     lastActiveDate: streak.lastActiveDate,
   };
+}
+
+/**
+ * Top active streaks among a guild's members — per-guild social data,
+ * scoped by member cache the same way as the XP leaderboard.
+ */
+export async function getGuildStreaks(guildId: string, limit = 10): Promise<GuildStreakEntry[]> {
+  const guild = getClient().guilds.cache.get(guildId);
+  if (!guild) return [];
+
+  const memberIds = guild.members.cache
+    .filter((m) => !m.user.bot)
+    .map((m) => m.id);
+
+  if (memberIds.length === 0) return [];
+
+  const streaks = await prisma.streak.findMany({
+    where: { userId: { in: memberIds }, current: { gt: 0 } },
+    orderBy: [{ current: "desc" }, { best: "desc" }],
+    take: limit,
+    include: { user: { select: { username: true } } },
+  });
+
+  return streaks.map((s) => ({
+    userId: s.userId,
+    username: s.user.username,
+    current: s.current,
+    best: s.best,
+  }));
 }

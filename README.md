@@ -8,7 +8,7 @@ A developer-first productivity operating system inside Discord — todos, goals,
 - **Goals** — track progress with `[0%──────] 0%` progress bars
 - **Reminders** — natural language (`/remind tomorrow 8am Gym`) via chrono-node
 - **Focus / Pomodoro** — timed work sessions with XP rewards
-- **Streaks & Stats** — daily activity streaks, derived productivity score
+- **Streaks & Stats** — daily activity streaks with a server-wide streak view, derived productivity score
 - **XP & Levels** — quadratic formula `xpForLevel(n) = 50n²`
 - **Badges** — declarative registry, auto-evaluated after every XP event
 - **Habits** — daily/weekly habit logging via button panels
