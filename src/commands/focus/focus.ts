@@ -1,8 +1,8 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js";
 import { commands, buttonHandlers } from "../../registry";
 import { createEmbed } from "../../utils/embedFactory";
-import { encode } from "../../utils/customId";
-import { ensureUser, createSession, getActiveSession, completeSession, abandonSession } from "../../services/focusService";
+import { encode, decode } from "../../utils/customId";
+import { ensureUser, createSession, getActiveSession, completeSession, stopAllSessions, expireStaleSessions } from "../../services/focusService";
 import { award } from "../../services/xpService";
 import { logger } from "../../utils/logger";
 
@@ -35,11 +35,13 @@ async function handleFocusStart(interaction: ChatInputCommandInteraction): Promi
   const userId = interaction.user.id;
   const minutes = interaction.options.getInteger("minutes") || 25;
 
-  // Check for existing active session
-  const [, existing] = await Promise.all([
+  // Sweep sessions whose timer (plus grace) already ran out, then check
+  // for a genuinely active one — stale timers must never block a new start.
+  await Promise.all([
     ensureUser(userId, interaction.user.username),
-    getActiveSession(userId),
+    expireStaleSessions(userId),
   ]);
+  const existing = await getActiveSession(userId);
   if (existing) {
     const embed = createEmbed("error").setTitle("Session in progress").setDescription(`You already have a focus session running (started <t:${Math.floor(existing.startedAt.getTime() / 1000)}:R>). Use \`/focus stop\` to end it.`);
     await interaction.editReply({ embeds: [embed] });
@@ -57,22 +59,21 @@ async function handleFocusStop(interaction: ChatInputCommandInteraction): Promis
   const userId = interaction.user.id;
 
   const active = await getActiveSession(userId);
-  if (!active) {
+
+  // Abandon everything IN_PROGRESS — past bugs could leave multiple stuck
+  // sessions, and stop must always leave the user with a clean slate.
+  const stopped = await stopAllSessions(userId);
+  if (stopped === 0) {
     const embed = createEmbed("error").setTitle("No active session").setDescription("You don't have a focus session running.");
     await interaction.editReply({ embeds: [embed] });
     return;
   }
 
-  const abandoned = await abandonSession(active.id, userId);
-  if (!abandoned) {
-    const embed = createEmbed("error").setTitle("Failed to stop").setDescription("Could not stop the session (already completed?).");
-    await interaction.editReply({ embeds: [embed] });
-    return;
-  }
-
+  const startedNote = active ? ` Session started <t:${Math.floor(active.startedAt.getTime() / 1000)}:R>.` : "";
+  const extraNote = stopped > 1 ? `\nAlso cleaned up **${stopped - 1}** stale session(s) left over from earlier.` : "";
   const embed = createEmbed("focus")
     .setTitle("⏹ Focus Session Stopped")
-    .setDescription(`Session abandoned after <t:${Math.floor(active.startedAt.getTime() / 1000)}:R>. No XP awarded.`);
+    .setDescription(`Session abandoned. No XP awarded.${startedNote}${extraNote}`);
   await interaction.editReply({ embeds: [embed] });
 }
 
@@ -103,7 +104,7 @@ function buildCompleteButton(userId: string, sessionId: string): ActionRowBuilde
 // Button handler: focus:complete
 buttonHandlers.set("focus:complete", async (interaction) => {
   await interaction.deferUpdate();
-  const { ownerId, entityId } = decodeCustomId(interaction.customId);
+  const { ownerId, entityId } = decode(interaction.customId);
   if (ownerId !== interaction.user.id) return; // Router already guards, but double-check
 
   const completed = await completeSession(entityId, ownerId);
@@ -132,8 +133,3 @@ buttonHandlers.set("focus:complete", async (interaction) => {
     await interaction.followUp({ embeds: [levelUpEmbed], flags: MessageFlags.Ephemeral });
   }
 });
-
-function decodeCustomId(customId: string): { domain: string; action: string; ownerId: string; entityId: string } {
-  const [domain = "", action = "", ownerId = "", entityId = "none"] = customId.split(":");
-  return { domain, action, ownerId, entityId };
-}

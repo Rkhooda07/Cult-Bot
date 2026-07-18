@@ -23,6 +23,38 @@ export async function ensureUser(userId: string, username: string): Promise<void
   });
 }
 
+/**
+ * Grace window after a session's scheduled end during which the user can
+ * still press "Mark Complete". Past it the session is considered stale.
+ */
+const COMPLETION_GRACE_MS = 30 * 60 * 1000;
+
+/**
+ * Close out IN_PROGRESS sessions whose end time (plus grace) has passed.
+ * Run before checking for an active session so abandoned timers never
+ * block a new `/focus start`. Returns how many sessions were expired.
+ */
+export async function expireStaleSessions(userId: string): Promise<number> {
+  const sessions = await prisma.pomodoroSession.findMany({
+    where: { userId, status: "IN_PROGRESS" },
+    select: { id: true, startedAt: true, durationMin: true },
+  });
+
+  const now = Date.now();
+  const staleIds = sessions
+    .filter((s) => s.startedAt.getTime() + s.durationMin * 60 * 1000 + COMPLETION_GRACE_MS < now)
+    .map((s) => s.id);
+
+  if (staleIds.length === 0) return 0;
+
+  const result = await prisma.pomodoroSession.updateMany({
+    where: { id: { in: staleIds }, status: "IN_PROGRESS" },
+    data: { status: "ABANDONED", completedAt: new Date() },
+  });
+
+  return result.count;
+}
+
 export async function getActiveSession(userId: string): Promise<PomodoroSessionItem | null> {
   const session = await prisma.pomodoroSession.findFirst({
     where: { userId, status: "IN_PROGRESS" },
@@ -83,25 +115,19 @@ export async function completeSession(sessionId: string, userId: string): Promis
   };
 }
 
-export async function abandonSession(sessionId: string, userId: string): Promise<PomodoroSessionItem | null> {
-  const session = await prisma.pomodoroSession.updateMany({
-    where: { id: sessionId, userId, status: "IN_PROGRESS" },
+/**
+ * Abandon ALL of the user's IN_PROGRESS sessions, not just the latest —
+ * historical bugs left multiple stuck rows per user, and `/focus stop`
+ * must always leave the user with a clean slate. Returns the number of
+ * sessions closed (0 = nothing was running).
+ */
+export async function stopAllSessions(userId: string): Promise<number> {
+  const result = await prisma.pomodoroSession.updateMany({
+    where: { userId, status: "IN_PROGRESS" },
     data: { status: "ABANDONED", completedAt: new Date() },
   });
 
-  if (session.count === 0) return null;
-
-  const updated = await prisma.pomodoroSession.findUnique({ where: { id: sessionId } });
-  if (!updated) return null;
-
-  return {
-    id: updated.id,
-    userId: updated.userId,
-    durationMin: updated.durationMin,
-    startedAt: updated.startedAt,
-    completedAt: updated.completedAt,
-    status: updated.status,
-  };
+  return result.count;
 }
 
 export async function getSessionStats(userId: string): Promise<{
