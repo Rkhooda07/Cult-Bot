@@ -4,6 +4,7 @@ import { getClient } from "../utils/client";
 import { logger } from "../utils/logger";
 import { COLORS } from "../utils/embedFactory";
 import { getStreak } from "./streakService";
+import { getSharedGuildsForUser } from "../utils/guildMembers";
 
 /**
  * Activity Broadcast System — spec Section 12.
@@ -71,17 +72,17 @@ export async function broadcast(
     // Current streak — shown as an ambient, always-on leaderboard signal.
     const streak = await getStreak(userId);
 
-    // 2b. Find every guild the bot shares with this user. Requires the
-    //     GuildMembers privileged intent (enabled in index.ts and the Portal);
-    //     without it, g.members.cache is empty and this finds zero guilds.
-    const sharedGuilds = client.guilds.cache.filter((g) =>
-      g.members.cache.has(userId)
-    );
+    // 2b. Find every guild the bot shares with this user. Uses a targeted
+    //     per-guild member fetch (see getSharedGuildsForUser) rather than
+    //     reading guild.members.cache directly, which is empty/partial on
+    //     servers above the large-guild threshold. Requires the GuildMembers
+    //     privileged intent (enabled in index.ts and the Portal).
+    const sharedGuilds = await getSharedGuildsForUser(userId);
 
-    if (sharedGuilds.size === 0) {
+    if (sharedGuilds.length === 0) {
       logger.debug(
         { userId },
-        "broadcast: no shared guilds found (is the GuildMembers intent enabled + members cached?)"
+        "broadcast: no shared guilds found (is the GuildMembers intent enabled?)"
       );
       return;
     }
@@ -94,7 +95,8 @@ export async function broadcast(
       currentStreak: streak.current,
     });
 
-    for (const [guildId, guild] of sharedGuilds) {
+    for (const guild of sharedGuilds) {
+      const guildId = guild.id;
       try {
         const settings = await prisma.guildSettings.findUnique({
           where: { id: guildId },
@@ -171,13 +173,4 @@ function buildBroadcastEmbed(args: {
   }
 
   return embed;
-}
-
-export async function getGuildSharedMembers(guildId: string): Promise<Array<{ id: string; username: string }>> {
-  const client = getClient();
-  const guild = client.guilds.cache.get(guildId);
-  if (!guild) return [];
-
-  const members = guild.members.cache.filter((m) => !m.user.bot);
-  return members.map((m) => ({ id: m.id, username: m.user.username }));
 }

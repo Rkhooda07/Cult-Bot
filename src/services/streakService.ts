@@ -2,6 +2,7 @@ import { prisma } from "../database/prisma";
 import { DateTime } from "luxon";
 import { logger } from "../utils/logger";
 import { getClient } from "../utils/client";
+import { ensureMembersCached } from "../utils/guildMembers";
 
 export interface StreakItem {
   id: string;
@@ -148,6 +149,10 @@ export async function getStreak(userId: string): Promise<StreakItem> {
 export async function getGuildStreaks(guildId: string, limit = 10): Promise<GuildStreakEntry[]> {
   const guild = getClient().guilds.cache.get(guildId);
   if (!guild) return [];
+
+  // Populate the member cache first — on servers above the large-guild
+  // threshold it's otherwise empty/partial and the streak board under-reports.
+  await ensureMembersCached(guild);
 
   const memberIds = guild.members.cache
     .filter((m) => !m.user.bot)

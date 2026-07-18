@@ -1,5 +1,6 @@
 import { prisma } from "../database/prisma";
 import { getClient } from "../utils/client";
+import { ensureMembersCached } from "../utils/guildMembers";
 
 export interface BoardEntry {
   userId: string;
@@ -18,6 +19,10 @@ export async function getBoard(guildId: string): Promise<BoardEntry[]> {
   const client = getClient();
   const guild = client.guilds.cache.get(guildId);
   if (!guild) return [];
+
+  // Populate the member cache first — on servers above the large-guild
+  // threshold it's otherwise empty/partial and the board under-reports.
+  await ensureMembersCached(guild);
 
   // Get member IDs (excluding bots)
   const memberIds = guild.members.cache

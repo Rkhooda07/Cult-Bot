@@ -4,6 +4,7 @@ import { DateTime } from "luxon";
 import { logger } from "../utils/logger";
 import { prisma } from "../database/prisma";
 import { createEmbed } from "../utils/embedFactory";
+import { getSharedGuildsForUser } from "../utils/guildMembers";
 
 let isRunning = false;
 
@@ -136,9 +137,12 @@ export function startWeeklyRecap(client: Client): void {
 
           // Attempt guild channel announcements if enabled
           if (user.broadcastEnabled) {
-            const sharedGuilds = client.guilds.cache.filter((g) => g.members.cache.has(user.id));
+            // Targeted per-guild membership resolution — guild.members.cache is
+            // empty/partial on servers above the large-guild threshold.
+            const sharedGuilds = await getSharedGuildsForUser(user.id);
 
-            for (const [guildId, guild] of sharedGuilds) {
+            for (const guild of sharedGuilds) {
+              const guildId = guild.id;
               try {
                 const settings = await prisma.guildSettings.findUnique({
                   where: { id: guildId },

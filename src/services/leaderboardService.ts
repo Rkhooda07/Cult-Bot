@@ -1,5 +1,6 @@
 import { prisma } from "../database/prisma";
 import { getClient } from "../utils/client";
+import { ensureMembersCached } from "../utils/guildMembers";
 import { DateTime } from "luxon";
 
 export interface LeaderboardEntry {
@@ -27,6 +28,10 @@ export async function getLeaderboard(
   const client = getClient();
   const guild = client.guilds.cache.get(guildId);
   if (!guild) return [];
+
+  // Populate the member cache first — on servers above the large-guild
+  // threshold it's otherwise empty/partial and the leaderboard under-reports.
+  await ensureMembersCached(guild);
 
   const memberIds = guild.members.cache
     .filter((m) => !m.user.bot)
