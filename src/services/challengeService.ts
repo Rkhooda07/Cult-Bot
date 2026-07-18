@@ -1,4 +1,8 @@
 import { prisma } from "../database/prisma";
+import { award } from "./xpService";
+
+/** Flat XP granted for finishing a community challenge. */
+export const CHALLENGE_COMPLETION_XP = 50;
 
 export interface ChallengeWithParticipants {
   id: string;
@@ -121,6 +125,12 @@ export async function completeChallenge(challengeId: string, userId: string): Pr
     where: { challengeId_userId: { challengeId, userId } },
     data: { completed: true },
   });
+
+  // Reward finishing the challenge with a flat XP grant. The guards above make
+  // this idempotent — a second completion returns early before reaching here,
+  // so the XP is awarded exactly once. The caller ensures the User row exists
+  // before this point, so award() won't throw.
+  await award(userId, CHALLENGE_COMPLETION_XP, "Challenge completed");
   return true;
 }
 

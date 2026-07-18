@@ -27,7 +27,9 @@ import {
   joinChallenge,
   completeChallenge,
   getUserChallengeStatus,
+  CHALLENGE_COMPLETION_XP,
 } from "../../services/challengeService";
+import { ensureUser } from "../../services/reminderService";
 
 // Modal-input validation (spec Section 10) — every modal submit is zod-validated
 // before any DB write. Bounds mirror the modal's own maxLength caps.
@@ -71,7 +73,11 @@ async function sendOrUpdateAnnouncement(challengeId: string, guildId: string): P
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(encode("challenge", "join", "0", challengeId))
+      // "public" owner sentinel: the join button lives on a shared guild-wide
+      // announcement, so any member must be able to click it. assertOwner
+      // bypasses the ownership check only for this literal (spec Section 6.4),
+      // same pattern as board:page pagination.
+      .setCustomId(encode("challenge", "join", "public", challengeId))
       .setLabel("Join Challenge")
       .setStyle(ButtonStyle.Primary)
       .setEmoji("🏁")
@@ -206,6 +212,10 @@ commands.set("challenge", {
         return;
       }
 
+      // award() (inside completeChallenge) requires the User row to exist, and
+      // the join flow never creates one — ensure it here before completing.
+      await ensureUser(interaction.user.id, interaction.user.username);
+
       const success = await completeChallenge(challengeId, interaction.user.id);
 
       if (success) {
@@ -215,7 +225,9 @@ commands.set("challenge", {
           embeds: [
             createEmbed("xp")
               .setTitle("✅ Challenge Completed!")
-              .setDescription(`You've completed **${challenge.title}**! Great work! 🎉`),
+              .setDescription(
+                `You've completed **${challenge.title}**! Great work! 🎉\n\n**+${CHALLENGE_COMPLETION_XP} XP**`
+              ),
           ],
         });
       } else {
