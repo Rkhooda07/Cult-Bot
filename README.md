@@ -122,7 +122,12 @@ npm run build && npm start
 docker-compose up --build
 ```
 
-Starts `postgres` + `bot`. The `bot` container runs `prisma migrate deploy` on startup automatically, so there are no manual DB steps. You still need to run `npm run deploy` once to register slash commands (it needs your bot token).
+Starts `postgres` + `bot`. On startup the `bot` container runs `prisma migrate deploy` (create/upgrade tables) and then `node dist/seed.js` (seed the baseline badge rows the auto-award system checks against) before launching — both are idempotent, so no manual DB steps are needed inside Docker.
+
+Two things Docker does **not** do for you:
+
+- **Register slash commands.** Run `npm run deploy` once from a local checkout (it needs your bot token). This is not part of the image because command registration uses `ts-node`, a devDependency the production image intentionally omits — so it requires a local Node environment with `npm install` already run.
+- Everything else (migrations, seeding) is handled by the container command.
 
 A recent performance pass reduced startup and interaction latency (early `deferReply`, parallelized independent DB reads, added indexes on hot foreign keys, and hardened against serverless-Postgres cold starts).
 

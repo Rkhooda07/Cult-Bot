@@ -27,8 +27,10 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://devos:devos_password@postgres:5432/devos
+    # migrate (create tables) -> seed (badge rows the auto-award system needs;
+    # upsert, so it's safe to re-run every start) -> start the bot.
     command: >
-      sh -c "npx prisma migrate deploy && node dist/index.js"
+      sh -c "npx prisma migrate deploy && node dist/seed.js && node dist/index.js"
 
 volumes:
   postgres_data:
