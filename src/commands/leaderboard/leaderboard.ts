@@ -47,7 +47,8 @@ commands.set("leaderboard", {
       const medals = ["🥇", "🥈", "🥉"];
       const lines = entries.map((e, i) => {
         const medal = i < 3 ? medals[i] : `${i + 1}.`;
-        return `${medal} **${e.username}** — ${e.xp} XP (Lv. ${e.level})`;
+        const streak = e.streakCurrent > 0 ? ` · 🔥 ${e.streakCurrent}d (best ${e.streakBest})` : "";
+        return `${medal} **${e.username}** — ${e.xp} XP (Lv. ${e.level})${streak}`;
       });
 
       const embed = createEmbed("leaderboard")

@@ -7,6 +7,17 @@ export interface LeaderboardEntry {
   username: string;
   xp: number;
   level: number;
+  streakCurrent: number;
+  streakBest: number;
+}
+
+/** Fetch streaks for a set of users and index them by userId. */
+async function getStreakMap(userIds: string[]): Promise<Map<string, { current: number; best: number }>> {
+  const streaks = await prisma.streak.findMany({
+    where: { userId: { in: userIds } },
+    select: { userId: true, current: true, best: true },
+  });
+  return new Map(streaks.map((s) => [s.userId, { current: s.current, best: s.best }]));
 }
 
 export async function getLeaderboard(
@@ -44,19 +55,25 @@ export async function getLeaderboard(
       .slice(0, 10);
 
     const userIdsTop = sorted.map(([id]) => id);
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIdsTop } },
-      select: { id: true, username: true, xp: true, level: true },
-    });
+    const [users, streakMap] = await Promise.all([
+      prisma.user.findMany({
+        where: { id: { in: userIdsTop } },
+        select: { id: true, username: true, xp: true, level: true },
+      }),
+      getStreakMap(userIdsTop),
+    ]);
     const userMap = new Map(users.map((u) => [u.id, u]));
 
     return sorted.map(([userId, xp]) => {
       const user = userMap.get(userId);
+      const streak = streakMap.get(userId);
       return {
         userId,
         username: user?.username || "Unknown",
         xp,
         level: user?.level || 1,
+        streakCurrent: streak?.current || 0,
+        streakBest: streak?.best || 0,
       };
     });
   }
@@ -68,10 +85,17 @@ export async function getLeaderboard(
     take: 10,
   });
 
-  return users.map((u) => ({
-    userId: u.id,
-    username: u.username,
-    xp: u.xp,
-    level: u.level,
-  }));
+  const streakMap = await getStreakMap(users.map((u) => u.id));
+
+  return users.map((u) => {
+    const streak = streakMap.get(u.id);
+    return {
+      userId: u.id,
+      username: u.username,
+      xp: u.xp,
+      level: u.level,
+      streakCurrent: streak?.current || 0,
+      streakBest: streak?.best || 0,
+    };
+  });
 }
