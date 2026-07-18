@@ -34,7 +34,6 @@ import {
 } from "../../services/goalService";
 import {
   createGoalEmbed,
-  buildActionRowsWithUserId,
   createProgressSelectMenu,
   createCompleteSelectMenu,
   createAbandonSelectMenu,
@@ -57,9 +56,7 @@ async function renderPanel(
     ensureUser(userId, username),
     getGoalsPaginated(userId, page),
   ]);
-  const { embed, components } = createGoalEmbed(username, data);
-
-  const finalComponents = buildActionRowsWithUserId(userId, data);
+  const { embed, components } = createGoalEmbed(username, userId, data);
 
   if (interaction.replied || interaction.deferred) {
     await interaction.editReply({ embeds: [embed], components });

@@ -16,6 +16,7 @@ import { PaginatedGoals, GoalItem, getStatusIcon, formatDeadline } from "../serv
 
 export function createGoalEmbed(
   username: string,
+  userId: string,
   data: PaginatedGoals
 ): { embed: EmbedBuilder; components: ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] } {
   const { goals, page, totalPages } = data;
@@ -43,97 +44,11 @@ export function createGoalEmbed(
     embed.setFooter({ text: "DevOS" });
   }
 
-  const components = buildGoalActionRows(data);
+  // Owner-aware rows are the single source of truth: every customId embeds the
+  // real userId so the router's assertOwner check passes for the panel owner.
+  const components = buildActionRowsWithUserId(userId, data);
 
   return { embed, components };
-}
-
-function buildGoalActionRows(
-  data: PaginatedGoals
-): ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] {
-  const { goals, page, totalPages } = data;
-  const inProgressGoals = goals.filter((g) => g.status === "IN_PROGRESS");
-  const incompleteCount = inProgressGoals.length;
-  const totalCount = goals.length;
-
-  const rows: ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[] = [];
-
-  const addBtn = new ButtonBuilder()
-    .setCustomId("goal:add:PLACEHOLDER")
-    .setLabel("Add")
-    .setStyle(ButtonStyle.Success)
-    .setEmoji("➕");
-
-  const progressBtn = new ButtonBuilder()
-    .setCustomId("goal:progress:PLACEHOLDER")
-    .setLabel("Update Progress")
-    .setStyle(ButtonStyle.Primary)
-    .setEmoji("📈")
-    .setDisabled(incompleteCount === 0);
-
-  const completeBtn = new ButtonBuilder()
-    .setCustomId("goal:complete:PLACEHOLDER")
-    .setLabel("Complete")
-    .setStyle(ButtonStyle.Success)
-    .setEmoji("✔")
-    .setDisabled(incompleteCount === 0);
-
-  const abandonBtn = new ButtonBuilder()
-    .setCustomId("goal:abandon:PLACEHOLDER")
-    .setLabel("Abandon")
-    .setStyle(ButtonStyle.Danger)
-    .setEmoji("⭕")
-    .setDisabled(incompleteCount === 0);
-
-  const deleteBtn = new ButtonBuilder()
-    .setCustomId("goal:delete:PLACEHOLDER")
-    .setLabel("Delete")
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji("🗑️")
-    .setDisabled(totalCount === 0);
-
-  const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    addBtn,
-    progressBtn,
-    completeBtn,
-    abandonBtn,
-    deleteBtn
-  );
-  rows.push(actionRow);
-
-  if (totalPages > 1) {
-    const pageSelect = new StringSelectMenuBuilder()
-      .setCustomId("goal:page:PLACEHOLDER")
-      .setPlaceholder(`Page ${page} of ${totalPages}`)
-      .addOptions(
-        Array.from({ length: totalPages }, (_, i) => i + 1).map((p) =>
-          new StringSelectMenuOptionBuilder()
-            .setLabel(`Page ${p}`)
-            .setValue(String(p))
-            .setDefault(p === page)
-        )
-      );
-
-    const pageRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(pageSelect);
-    rows.push(pageRow);
-
-    const prevBtn = new ButtonBuilder()
-      .setCustomId("goal:page:PLACEHOLDER:" + String(page - 1))
-      .setLabel("◀ Prev")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(page === 1);
-
-    const nextBtn = new ButtonBuilder()
-      .setCustomId("goal:page:PLACEHOLDER:" + String(page + 1))
-      .setLabel("Next ▶")
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(page === totalPages);
-
-    const navRow = new ActionRowBuilder<ButtonBuilder>().addComponents(prevBtn, nextBtn);
-    rows.push(navRow);
-  }
-
-  return rows;
 }
 
 export function buildActionRowsWithUserId(
