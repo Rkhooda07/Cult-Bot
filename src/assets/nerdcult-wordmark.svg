@@ -1,0 +1,38 @@
+<svg viewBox="0 0 1400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0b16"/>
+      <stop offset="100%" stop-color="#1a1442"/>
+    </linearGradient>
+    <linearGradient id="bracket2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5865F2"/>
+      <stop offset="100%" stop-color="#9B59B6"/>
+    </linearGradient>
+    <radialGradient id="glow2" cx="16%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="#5865F2" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#5865F2" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1400" height="400" fill="url(#bg2)"/>
+  <circle cx="200" cy="200" r="230" fill="url(#glow2)"/>
+
+  <!-- Icon, scaled down and left-aligned -->
+  <g transform="translate(30, 20) scale(0.7)">
+    <path d="M 200 140 L 108 256 L 200 372"
+          fill="none" stroke="url(#bracket2)" stroke-width="34"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 312 140 L 404 256 L 312 372"
+          fill="none" stroke="url(#bracket2)" stroke-width="34"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M 224 262 L 248 290 L 294 222"
+          fill="none" stroke="#F1C40F" stroke-width="30"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="400" y="230" font-family="Arial, Helvetica, sans-serif" font-weight="800"
+        font-size="120" fill="#FFFFFF" letter-spacing="2">Nerd<tspan fill="#9B59B6">Cult</tspan></text>
+  <text x="404" y="280" font-family="Arial, Helvetica, sans-serif" font-weight="500"
+        font-size="34" fill="#8b8fa3" letter-spacing="4">DEVELOPER PRODUCTIVITY, GAMIFIED</text>
+</svg>

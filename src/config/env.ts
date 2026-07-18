@@ -9,6 +9,14 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   // Optional: higher GitHub API rate limits
   GITHUB_TOKEN: z.string().optional(),
+  // Optional: public raw.githubusercontent.com URL to the committed bot icon,
+  // used as the embed footer icon. Only works once the repo is pushed public;
+  // leave unset otherwise — every consumer degrades gracefully when empty.
+  BOT_ICON_URL: z.string().url().optional(),
+  // Optional: when explicitly "true", the bot attempts to set its own avatar
+  // once on startup. Discord rate-limits avatar changes heavily, so this is
+  // opt-in and never retried — see .env.example and events/ready.ts.
+  AUTO_SET_AVATAR: z.string().optional(),
 });
 
 function validateEnv() {

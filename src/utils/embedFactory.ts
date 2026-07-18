@@ -1,4 +1,5 @@
 import { EmbedBuilder } from "discord.js";
+import { ICON_URL } from "../config/branding";
 
 /**
  * Embed color palette — spec Section 6.1.
@@ -32,9 +33,15 @@ export type ColorDomain = keyof typeof COLORS;
  *   const embed = createEmbed("todo").setTitle("📝 Your Todos");
  */
 export function createEmbed(domain: ColorDomain): EmbedBuilder {
+  // Only pass iconURL when we actually have one — Discord rejects an empty
+  // string, so an unset BOT_ICON_URL must omit the field entirely.
+  const footer = ICON_URL
+    ? { text: "DevOS", iconURL: ICON_URL }
+    : { text: "DevOS" };
+
   return new EmbedBuilder()
     .setColor(COLORS[domain])
-    .setFooter({ text: "DevOS" })
+    .setFooter(footer)
     .setTimestamp();
 }
 
