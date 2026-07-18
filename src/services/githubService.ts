@@ -34,8 +34,14 @@ export const MAX_XP_COMMITS_PER_DAY = 5;
 /** +10 XP for detected private-repo activity, shares the same daily cap as public commits. */
 export const XP_PER_PRIVATE_ACTIVITY = 10;
 
-/** reason prefix used for XPLog rows, also used to count today's awarded commits. */
+/** reason prefix used for public-commit XPLog rows; also used to count today's awarded commits. */
 export const GITHUB_XP_REASON = "GitHub commit";
+
+/**
+ * reason string for private-activity XPLog rows. Must be counted alongside
+ * public commits so both draw from the SAME daily cap (see countGithubXpCommitsToday).
+ */
+export const GITHUB_PRIVATE_XP_REASON = "GitHub private contribution";
 
 export interface GithubPushActivity {
   /** SHA of the most recent commit across the fetched push events (newest first). */
@@ -91,7 +97,12 @@ export async function countGithubXpCommitsToday(userId: string): Promise<number>
   return prisma.xPLog.count({
     where: {
       userId,
-      reason: { startsWith: GITHUB_XP_REASON },
+      // Count BOTH public commit awards ("GitHub commit ...") and private
+      // activity awards so the two share one 5/day cap, not 5 each.
+      OR: [
+        { reason: { startsWith: GITHUB_XP_REASON } },
+        { reason: GITHUB_PRIVATE_XP_REASON },
+      ],
       createdAt: { gte: startOfUtcDay },
     },
   });

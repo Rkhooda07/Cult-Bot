@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import { Client } from "discord.js";
+import type { GithubLink } from "@prisma/client";
 import { logger } from "../utils/logger";
 import { prisma } from "../database/prisma";
 import { award } from "../services/xpService";
@@ -14,9 +15,151 @@ import {
   XP_PER_PRIVATE_ACTIVITY,
   MAX_XP_COMMITS_PER_DAY,
   GITHUB_XP_REASON,
+  GITHUB_PRIVATE_XP_REASON,
 } from "../services/githubService";
 
 let isRunning = false;
+
+/**
+ * Process a single linked GitHub account for one poll cycle: award XP for new
+ * public commits (capped), then always check the contribution calendar for
+ * private-repo activity. Extracted from the cron loop so the award/cap/private
+ * logic is unit-testable. Errors propagate to the caller, which isolates each
+ * user in its own try/catch.
+ */
+export async function processGithubLink(link: GithubLink): Promise<void> {
+  const activity = await fetchNewCommits(link.username, link.lastCommitSha);
+
+  // null = transient API error / user not found; skip this cycle.
+  if (!activity) return;
+
+  const newCommitCount = activity.newCommits.length;
+
+  if (newCommitCount > 0) {
+    // Apply the daily XP cap. We may have already awarded some commits
+    // earlier today, so award only up to the remaining allowance.
+    const alreadyAwardedToday = await countGithubXpCommitsToday(link.userId);
+    const remaining = Math.max(0, MAX_XP_COMMITS_PER_DAY - alreadyAwardedToday);
+    const commitsToAward = Math.min(newCommitCount, remaining);
+
+    let totalXp = 0;
+    for (let i = 0; i < commitsToAward; i++) {
+      const commit = activity.newCommits[i];
+      await award(
+        link.userId,
+        XP_PER_COMMIT,
+        `${GITHUB_XP_REASON} (${commit.repoShort})`
+      );
+      totalXp += XP_PER_COMMIT;
+    }
+
+    // Always advance the SHA past everything we saw this cycle, even the
+    // commits that exceeded the cap — otherwise they'd re-award tomorrow.
+    await updateLastCommitSha(link.userId, activity.latestSha);
+
+    logger.info(
+      {
+        userId: link.userId,
+        username: link.username,
+        newCommitCount,
+        commitsAwarded: commitsToAward,
+        totalXp,
+        cappedOut: commitsToAward < newCommitCount,
+      },
+      "GitHub poller: processed new commits"
+    );
+
+    // Broadcast only if XP was actually awarded this cycle (a real,
+    // countable contribution). broadcastService handles the opt-in/opt-out.
+    if (totalXp > 0) {
+      const repo = activity.latestRepo ?? "a repository";
+      const commitWord = newCommitCount === 1 ? "commit" : "commits";
+      await broadcast(link.userId, {
+        emoji: "🚀",
+        title: "New Commit Shipped!",
+        description: `pushed ${newCommitCount} ${commitWord} to \`${repo}\``,
+        xpAwarded: totalXp,
+      });
+    }
+  } else {
+    // Baseline-only (first poll after linking, or no new push events):
+    // record the SHA so we have a starting point, award nothing.
+    if (activity.latestSha && activity.latestSha !== link.lastCommitSha) {
+      await updateLastCommitSha(link.userId, activity.latestSha);
+    }
+  }
+
+  // --- Private activity detection (GraphQL contribution calendar) ---
+  // Runs on EVERY cycle regardless of public commits — a user who only
+  // pushed to a private repo has no public PushEvent, so gating this on
+  // public commits would make private-only work undetectable (the whole
+  // point of the feature). Compare the current contribution total to the
+  // stored baseline; any increase beyond the public commits seen this
+  // cycle is treated as private activity: +10 XP under the SAME shared
+  // daily cap (5/day total combined), plus a detail-free broadcast.
+  const calendar = await fetchContributionCalendar(link.username);
+  if (calendar) {
+    const totalContributions = calendar.totalContributions;
+
+    if (link.lastContributionCount === null || link.lastContributionCount === undefined) {
+      // First poll after linking: store the baseline only. Never treat
+      // the user's entire prior-year contribution history as one giant
+      // private-activity burst.
+      await updateLastContributionCount(link.userId, totalContributions);
+    } else {
+      const prevCount = link.lastContributionCount;
+      const totalIncrease = totalContributions - prevCount;
+
+      // Only private activity if the total grew more than the public
+      // commits we already counted this cycle.
+      if (totalIncrease > newCommitCount) {
+        const privateActivityCount = totalIncrease - newCommitCount;
+
+        // Shared daily cap: countGithubXpCommitsToday now counts BOTH
+        // public commit awards AND private awards, so private draws from
+        // the same 5/day budget rather than getting its own.
+        const alreadyAwarded = await countGithubXpCommitsToday(link.userId);
+        const remaining = Math.max(0, MAX_XP_COMMITS_PER_DAY - alreadyAwarded);
+
+        if (remaining > 0 && privateActivityCount > 0) {
+          // +10 XP for private activity (capped at one award per cycle —
+          // multiple private contributions in one cycle still yield a
+          // single +10).
+          await award(
+            link.userId,
+            XP_PER_PRIVATE_ACTIVITY,
+            GITHUB_PRIVATE_XP_REASON
+          );
+
+          // Detail-free variant: no repo name, no commit message.
+          await broadcast(link.userId, {
+            emoji: "🔒",
+            title: "Private Progress!",
+            description: "made some private-repo progress today",
+            xpAwarded: XP_PER_PRIVATE_ACTIVITY,
+          });
+
+          logger.info(
+            {
+              userId: link.userId,
+              username: link.username,
+              totalContributions,
+              prevCount,
+              totalIncrease,
+              newCommitCount,
+              privateActivityCount,
+              xpAwarded: XP_PER_PRIVATE_ACTIVITY,
+            },
+            "GitHub poller: detected and awarded private activity"
+          );
+        }
+      }
+
+      // Advance the stored baseline to the latest total.
+      await updateLastContributionCount(link.userId, totalContributions);
+    }
+  }
+}
 
 /**
  * GitHub activity poller — spec Section 7 (Phase 4), Section 10, Section 12.
@@ -57,126 +200,7 @@ export function startGithubPoller(client: Client): void {
 
       for (const link of links) {
         try {
-          const activity = await fetchNewCommits(link.username, link.lastCommitSha);
-
-          // null = transient API error / user not found; skip this cycle.
-          if (!activity) continue;
-
-          // Baseline-only first poll (or no push events yet): record the SHA so
-          // we have a starting point, award nothing.
-          if (activity.newCommits.length === 0) {
-            if (activity.latestSha && activity.latestSha !== link.lastCommitSha) {
-              await updateLastCommitSha(link.userId, activity.latestSha);
-            }
-            continue;
-          }
-
-          const newCommitCount = activity.newCommits.length;
-
-          // Apply the daily XP cap. We may have already awarded some commits
-          // earlier today, so award only up to the remaining allowance.
-          const alreadyAwardedToday = await countGithubXpCommitsToday(link.userId);
-          const remaining = Math.max(0, MAX_XP_COMMITS_PER_DAY - alreadyAwardedToday);
-          const commitsToAward = Math.min(newCommitCount, remaining);
-
-          let totalXp = 0;
-          for (let i = 0; i < commitsToAward; i++) {
-            const commit = activity.newCommits[i];
-            await award(
-              link.userId,
-              XP_PER_COMMIT,
-              `${GITHUB_XP_REASON} (${commit.repoShort})`
-            );
-            totalXp += XP_PER_COMMIT;
-          }
-
-          // Always advance the SHA past everything we saw this cycle, even the
-          // commits that exceeded the cap — otherwise they'd re-award tomorrow.
-          await updateLastCommitSha(link.userId, activity.latestSha);
-
-          logger.info(
-            {
-              userId: link.userId,
-              username: link.username,
-              newCommitCount,
-              commitsAwarded: commitsToAward,
-              totalXp,
-              cappedOut: commitsToAward < newCommitCount,
-            },
-            "GitHub poller: processed new commits"
-          );
-
-          // Broadcast only if XP was actually awarded this cycle (a real,
-          // countable contribution). broadcastService handles the opt-in/opt-out.
-          if (totalXp > 0) {
-            const repo = activity.latestRepo ?? "a repository";
-            const commitWord = newCommitCount === 1 ? "commit" : "commits";
-            await broadcast(link.userId, {
-              emoji: "🚀",
-              title: "New Commit Shipped!",
-              description: `pushed ${newCommitCount} ${commitWord} to \`${repo}\``,
-              xpAwarded: totalXp,
-            });
-          }
-
-          // --- Private activity detection (GraphQL contribution calendar) ---
-          // Query total contributions and compare to stored lastContributionCount.
-          // If the increase exceeds the public commits we just detected, the
-          // difference is private-repo activity. Award +10 XP under the SAME
-          // shared daily cap (5/day total combined), broadcast a detail-free embed.
-          const calendar = await fetchContributionCalendar(link.username);
-          if (calendar) {
-            const totalContributions = calendar.totalContributions;
-            const prevCount = link.lastContributionCount ?? 0;
-            const totalIncrease = totalContributions - prevCount;
-
-            // Only consider it private activity if total grew more than the
-            // public commits we already detected this cycle.
-            if (totalIncrease > newCommitCount) {
-              const privateActivityCount = totalIncrease - newCommitCount;
-
-              // Re-check the daily cap (shared with public commits) since we may
-              // have just awarded XP for public commits above.
-              const alreadyAwardedAfterPublic = await countGithubXpCommitsToday(link.userId);
-              const remainingAfterPublic = Math.max(0, MAX_XP_COMMITS_PER_DAY - alreadyAwardedAfterPublic);
-
-              if (remainingAfterPublic > 0 && privateActivityCount > 0) {
-                // Award +10 XP for private activity (capped at 1 award per cycle
-                // to keep it simple — multiple private-repo contributions in one
-                // poll cycle still yield a single +10).
-                await award(
-                  link.userId,
-                  XP_PER_PRIVATE_ACTIVITY,
-                  "GitHub private contribution"
-                );
-
-                // Broadcast the private-activity variant: no repo name, no commit message.
-                await broadcast(link.userId, {
-                  emoji: "🔒",
-                  title: "Private Progress!",
-                  description: "made some private-repo progress today",
-                  xpAwarded: XP_PER_PRIVATE_ACTIVITY,
-                });
-
-                logger.info(
-                  {
-                    userId: link.userId,
-                    username: link.username,
-                    totalContributions,
-                    prevCount,
-                    totalIncrease,
-                    newCommitCount,
-                    privateActivityCount,
-                    xpAwarded: XP_PER_PRIVATE_ACTIVITY,
-                  },
-                  "GitHub poller: detected and awarded private activity"
-                );
-              }
-            }
-
-            // Always update the stored contribution count to the latest total.
-            await updateLastContributionCount(link.userId, totalContributions);
-          }
+          await processGithubLink(link);
         } catch (err) {
           logger.error(
             { err, userId: link.userId, username: link.username },
