@@ -7,7 +7,11 @@ const envSchema = z.object({
   DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
   DISCORD_CLIENT_ID: z.string().min(1, "DISCORD_CLIENT_ID is required"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  // Optional: higher GitHub API rate limits
+  // Optional at boot, but required in practice for the GitHub integration to
+  // work: the poller runs every 2 minutes, and unauthenticated REST is capped
+  // at 60 requests/hour. Deliberately NOT required — GitHub is one opt-in
+  // feature, so a missing token must not stop the bot starting. githubPoller.ts
+  // logs a warning at startup when it is unset.
   GITHUB_TOKEN: z.string().optional(),
   // Optional: public raw.githubusercontent.com URL to the committed bot icon,
   // used as the embed footer icon. Only works once the repo is pushed public;

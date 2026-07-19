@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { Client } from "discord.js";
 import type { GithubLink } from "@prisma/client";
 import { logger } from "../utils/logger";
+import { env } from "../config/env";
 import { prisma } from "../database/prisma";
 import { award } from "../services/xpService";
 import { broadcast } from "../services/broadcastService";
@@ -230,4 +231,18 @@ export function startGithubPoller(client: Client): void {
   });
 
   logger.info("GitHub poller started (every 2 min)");
+
+  // GITHUB_TOKEN stays optional in env.ts — a missing token must not stop the
+  // bot booting, since GitHub is one opt-in integration among several. But at
+  // this poll interval an unauthenticated bot is broken in practice, so warn
+  // loudly rather than letting it fail silently as 403s inside the poller.
+  if (!env.GITHUB_TOKEN) {
+    logger.warn(
+      "GITHUB_TOKEN not set — GitHub integration will hit rate limits almost " +
+        "immediately at the current 2-minute poll interval (unauthenticated REST " +
+        "is capped at 60 requests/hour, and the GraphQL API used for private-" +
+        "activity detection rejects unauthenticated requests outright). " +
+        "Set GITHUB_TOKEN to use /link github."
+    );
+  }
 }
