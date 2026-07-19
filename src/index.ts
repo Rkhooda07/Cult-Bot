@@ -74,7 +74,7 @@ async function main() {
   const { startStreakCheck } = await import("./cron/streakCheck");
   startStreakCheck(client);
 
-  // Start GitHub activity poller (runs every 15 min)
+  // Start GitHub activity poller (runs every 2 min)
   const { startGithubPoller } = await import("./cron/githubPoller");
   startGithubPoller(client);
 

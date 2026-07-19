@@ -164,7 +164,7 @@ export async function processGithubLink(link: GithubLink): Promise<void> {
 /**
  * GitHub activity poller — spec Section 7 (Phase 4), Section 10, Section 12.
  *
- * Runs every 15 minutes. For each linked user:
+ * Runs every 2 minutes. For each linked user:
  *   1. Fetch commits newer than the stored lastCommitSha via the GitHub API.
  *   2. Award +20 XP per new commit, capped at 5 XP-awarding commits/day/user.
  *   3. Advance lastCommitSha so commits are never double-counted.
@@ -180,7 +180,21 @@ export async function processGithubLink(link: GithubLink): Promise<void> {
  * so it holds across restarts and across multiple poll cycles within a day.
  */
 export function startGithubPoller(client: Client): void {
-  cron.schedule("*/15 * * * *", async () => {
+  // API cost of this interval — read before shrinking it further.
+  //
+  // Each cycle makes 2 GitHub API calls per linked user: one REST call for new
+  // public commits, one GraphQL call for the contribution count (private-activity
+  // detection). At every 2 minutes that is:
+  //
+  //   30 cycles/hour x 2 calls x N linked users = 60N requests/hour
+  //
+  // An authenticated token allows 5,000 requests/hour, so this is safe to roughly
+  // ~80 linked users (60 x 80 = 4,800). Past that, lengthen the interval again or
+  // add batching — do not just shrink this expression. Note the two calls bill
+  // against separate quotas (REST vs GraphQL), so 5,000/hr is the conservative
+  // read; without GITHUB_TOKEN the unauthenticated REST limit is only 60/hour,
+  // which this interval blows through with a single linked user.
+  cron.schedule("*/2 * * * *", async () => {
     if (isRunning) {
       logger.debug("GitHub poller skipped — previous run still in progress");
       return;
@@ -215,5 +229,5 @@ export function startGithubPoller(client: Client): void {
     }
   });
 
-  logger.info("GitHub poller started (every 15 min)");
+  logger.info("GitHub poller started (every 2 min)");
 }

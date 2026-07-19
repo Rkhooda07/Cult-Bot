@@ -21,8 +21,9 @@ import {
  * /link — connect external dev accounts (spec Section 7, Phase 4).
  *
  * One command per domain (a single `/link` entry point with per-source
- * subcommands: github, leetcode, codeforces). Linked accounts are polled every
- * 15 min; new activity awards XP and (per Section 12) can broadcast to
+ * subcommands: github, leetcode, codeforces). Linked accounts are polled on a
+ * cron (GitHub every 2 min, LeetCode and Codeforces every 15 min); new activity
+ * awards XP and (per Section 12) can broadcast to
  * configured guild channels via the shared broadcastService.
  */
 commands.set("link", {
@@ -96,7 +97,7 @@ commands.set("link", {
           createEmbed("stats")
             .setTitle("🔗 GitHub Linked")
             .setDescription(
-              `Linked to [**${username}**](https://github.com/${username}).\n\nNew public commits will award **+20 XP** each (up to 5/day) and — if a server you're in has an announce channel set — get celebrated there automatically. Polls run every 15 minutes.`
+              `Linked to [**${username}**](https://github.com/${username}).\n\nNew public commits will award **+20 XP** each (up to 5/day) and — if a server you're in has an announce channel set — get celebrated there automatically. Polls run every 2 minutes.`
             ),
         ],
       });
