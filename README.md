@@ -95,8 +95,10 @@ npm install
 # 2. Configure environment
 cp .env.example .env    # then fill in the values (see table below)
 
-# 3. Start Postgres (or point DATABASE_URL at any Postgres 14+ instance)
-docker-compose up postgres -d
+# 3. Database. Either point DATABASE_URL at a hosted Postgres 14+ (the deployed
+#    bot uses Neon), or start a local one — it's behind a compose profile so it
+#    never runs in production:
+docker compose --profile local-db up postgres -d
 
 # 4. Apply migrations & generate the Prisma client
 npx prisma migrate deploy
@@ -119,15 +121,22 @@ npm run build && npm start
 ### Full stack via Docker
 
 ```bash
-docker-compose up --build
+docker compose up -d --build
 ```
 
-Starts `postgres` + `bot`. On startup the `bot` container runs `prisma migrate deploy` (create/upgrade tables) and then `node dist/seed.js` (seed the baseline badge rows the auto-award system checks against) before launching — both are idempotent, so no manual DB steps are needed inside Docker.
+Starts the `bot` service only. The database is **external** (Neon) — `DATABASE_URL` comes from `.env` and is deliberately not overridden by compose, so the deployed bot always talks to the same database it was developed against. Add `--profile local-db` if you also want the local Postgres container (development only).
 
-Two things Docker does **not** do for you:
+On startup the container runs `prisma migrate deploy` (apply pending schema changes) and then `node dist/seed.js` (seed the baseline badge rows the auto-award system checks against) before launching — both are idempotent, so no manual DB steps are needed.
 
-- **Register slash commands.** Run `npm run deploy` once from a local checkout (it needs your bot token). This is not part of the image because command registration uses `ts-node`, a devDependency the production image intentionally omits — so it requires a local Node environment with `npm install` already run.
-- Everything else (migrations, seeding) is handled by the container command.
+**Register slash commands** after a deploy that changed a command definition:
+
+```bash
+docker compose run --rm bot node dist/deploy-commands.js
+```
+
+`src/deploy-commands.ts` is compiled into `dist/` by the normal build, so this runs inside the production image and registers exactly the commands that shipped. (It reads `.env` directly and will fail on a missing `DATABASE_URL` even though it never queries the database.) Global registration takes up to an hour to propagate.
+
+See [`docs/deployment.md`](docs/deployment.md) for the full Oracle Cloud ARM VM runbook.
 
 A recent performance pass reduced startup and interaction latency (early `deferReply`, parallelized independent DB reads, added indexes on hot foreign keys, and hardened against serverless-Postgres cold starts).
 
