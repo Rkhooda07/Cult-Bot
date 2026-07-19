@@ -141,7 +141,16 @@ restart-loops.
 
 ## Phase 4 — Environment variables
 
-Set these in KataBump's dashboard, never in the repo. This list is derived from
+**They cannot be set in the panel.** KataBump runs Pterodactyl, and its Node egg
+exposes exactly two variables under Startup → Variables: `ADDITIONAL NODE
+PACKAGES` and `JS FILE`. There is no way to add custom ones.
+
+Upload a **`.env` at `/home/container/.env`** instead (Files → New File, named
+`.env`). `src/config/env.ts` calls `dotenv.config()`, so this is read exactly as
+in local development. Keep your local `.env` as the source of truth — a free
+server is deleted a day after expiry and takes this file with it.
+
+This list is derived from
 `src/config/env.ts`, which validates every variable with zod at boot and refuses
 to start if a required one is missing or malformed.
 
@@ -166,6 +175,28 @@ to start if a required one is missing or malformed.
 
 `GUILD_ID` is **not** needed on the host — it is only read by the local
 `npm run deploy` script.
+
+## Phase 4b — The two panels
+
+KataBump splits into two sites with **separate credentials**, which is the most
+common stumbling block:
+
+- **katabump.com** — billing and account. Creates the server; has no file
+  manager.
+- **control.katabump.com** — Pterodactyl. Files, Startup, Console, everything
+  operational.
+
+The control panel password is *not* the billing password, and signing up via
+Discord may never set one. Use the **🚀 Access server** button on the billing
+site's server page to SSO straight in, or set a password under **Change
+password** first.
+
+Upload flow: **Files** → drag a zip in (100 MB cap) → right-click → **Unarchive**
+→ verify `package.json`, `dist/`, and `prisma/` landed at the root, not nested
+inside a folder. Dependency install only reads the root.
+
+Startup → **JS FILE** → `dist/index.js`, which resolves to
+`node /home/container/dist/index.js`.
 
 ## Phase 5 — Health endpoint (optional on this host)
 
@@ -310,17 +341,17 @@ data-threatening on this path, since migrations do not run at boot here.
 
 ## Resource notes
 
-**KataBump free gives 308 MB RAM and 716 MB storage.** Measured idle RSS of this
-bot is **162 MB** (`ps -o rss=` against `node dist/index.js`, ~25 s after boot,
-2 guilds). That leaves roughly 145 MB of headroom.
+**KataBump free gives 308 MB RAM and 716 MB storage.** Measured **in production**
+after a clean boot: **93.6 MB RAM (30%) and 59.3 MB disk (8%)**.
 
-The headroom matters because `@napi-rs/canvas` allocates its bitmap while
+Both are far below the local figures — 162 MB idle RSS on macOS, 364 MB of
+`node_modules`. The host installs production dependencies only and runs without
+`pino-pretty`, which accounts for the difference. Roughly 214 MB of headroom.
+
+That headroom matters because `@napi-rs/canvas` allocates its bitmap while
 rendering a `/dev-stats` contribution graph — the only allocation that spikes,
-and therefore the first suspect for any OOM kill. Memory scales with guild count
-and the `GuildMembers` cache too, so re-measure if the bot joins larger servers.
-
-`node_modules` is ~364 MB installed, about half the 716 MB storage allowance.
-Comfortable, but not room for much else.
+and the first suspect for any OOM kill. Memory also scales with guild count and
+the `GuildMembers` cache, so re-measure if the bot joins larger servers.
 
 `@napi-rs/canvas` ships prebuilt native binaries and resolves the right one at
 install time. It is the one dependency that would fail on an unusual platform,
