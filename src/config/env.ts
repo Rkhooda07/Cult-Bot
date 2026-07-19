@@ -13,10 +13,20 @@ const envSchema = z.object({
   // feature, so a missing token must not stop the bot starting. githubPoller.ts
   // logs a warning at startup when it is unset.
   GITHUB_TOKEN: z.string().optional(),
-  // Optional: public raw.githubusercontent.com URL to the committed bot icon,
-  // used as the embed footer icon. Only works once the repo is pushed public;
-  // leave unset otherwise — every consumer degrades gracefully when empty.
-  BOT_ICON_URL: z.string().url().optional(),
+  // Optional override for the embed footer icon. Normally unset — branding.ts
+  // falls back to the bot's own Discord-hosted avatar, which needs no config.
+  //
+  // The empty string is normalized to undefined BEFORE the url check, because
+  // `BOT_ICON_URL=` in a .env file is the obvious way to express "off" and must
+  // not be fatal. Without this, .optional() only permits the variable being
+  // absent — a bare `BOT_ICON_URL=` parses as "" , fails .url(), and takes the
+  // whole bot down at boot over a cosmetic footer icon. A non-empty non-URL is
+  // still rejected: that's a typo, not an opt-out.
+  BOT_ICON_URL: z
+    .string()
+    .transform((v) => (v.trim() === "" ? undefined : v))
+    .pipe(z.string().url().optional())
+    .optional(),
   // Optional: when explicitly "true", the bot attempts to set its own avatar
   // once on startup. Discord rate-limits avatar changes heavily, so this is
   // opt-in and never retried — see .env.example and events/ready.ts.

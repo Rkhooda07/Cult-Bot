@@ -143,7 +143,7 @@ Read from [`src/config/env.ts`](src/config/env.ts) and validated with `zod` at b
 | `DISCORD_CLIENT_ID` | ✅ | Application (client) ID from the Developer Portal. |
 | `DATABASE_URL` | ✅ | PostgreSQL connection string. |
 | `GITHUB_TOKEN` | ⚠️ | Optional at boot, but **required in practice for the GitHub integration to function**. The poller runs every 2 minutes; unauthenticated REST is capped at 60 requests/hour and the GraphQL private-activity check rejects unauthenticated requests outright. The bot starts without it and logs a warning — omit it only if you won't use `/link github`. |
-| `BOT_ICON_URL` | — | Optional. Public `raw.githubusercontent.com` URL to the committed bot icon, shown in embed footers. Only resolves once the repo is pushed public; safely ignored when unset. |
+| `BOT_ICON_URL` | — | Optional **override** for the embed footer icon. Not needed normally — the footer defaults to the bot's own Discord-hosted avatar, so it works with no config once the bot has a profile picture. Set this only to show a different image. Must be a public HTTPS URL Discord can fetch anonymously; blank is treated as unset. |
 | `AUTO_SET_AVATAR` | — | Optional. When exactly `"true"`, the bot sets its own avatar once on startup. Off by default; never retried (Discord rate-limits avatar changes). Uploading the icon manually via the Developer Portal is the recommended path. |
 
 ---
