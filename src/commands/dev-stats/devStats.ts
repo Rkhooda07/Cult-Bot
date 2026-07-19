@@ -3,7 +3,12 @@ import { commands } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
 import { prisma } from "../../database/prisma";
-import { getCommitsToday, fetchContributionCalendar } from "../../services/githubService";
+import {
+  fetchContributionCalendar,
+  countContributionsToday,
+  countGithubXpCommitsToday,
+  MAX_XP_COMMITS_PER_DAY,
+} from "../../services/githubService";
 import { getSolvesToday as getLeetcodeSolvesToday } from "../../services/leetcodeService";
 import { fetchSolvedToday as getCodeforcesSolvesToday } from "../../services/codeforcesService";
 import { renderContributionGraph } from "../../utils/contributionGraphRenderer";
@@ -11,7 +16,10 @@ import { renderContributionGraph } from "../../utils/contributionGraphRenderer";
 /**
  * /dev-stats — combined dev-activity dashboard (spec Section 7, Phase 4).
  *
- * Shows today's (UTC) GitHub commits, LeetCode solves, and Codeforces solves.
+ * Shows today's (UTC) GitHub contributions, LeetCode solves, and Codeforces
+ * solves. The GitHub figure comes from the GraphQL contribution calendar, which
+ * counts private work too — see countContributionsToday() for why the public
+ * events feed was abandoned.
  * Renders correctly for any number of linked integrations:
  *   - 0 linked → a friendly "link something" prompt.
  *   - 1/2/3 linked → one field per linked source; unlinked sources are listed
@@ -65,21 +73,22 @@ commands.set("dev-stats", {
         return;
       }
 
-      // Fetch today's figures only for the linked sources, in parallel.
-      const [commitsToday, lcSolvesToday, cfSolvesToday] = await Promise.all([
-        github ? getCommitsToday(github.username) : Promise.resolve<null>(null),
+      // Fetch today's figures only for the linked sources, in parallel. The
+      // GitHub calendar serves double duty here — it is both the source of the
+      // "today" count and the input to the rendered graph, so it is fetched once.
+      const [calendar, githubXpAwardsToday, lcSolvesToday, cfSolvesToday] = await Promise.all([
+        github ? fetchContributionCalendar(github.username) : Promise.resolve(null),
+        github ? countGithubXpCommitsToday(user.id) : Promise.resolve<null>(null),
         leetcode ? getLeetcodeSolvesToday(leetcode.username) : Promise.resolve<null>(null),
         codeforces ? getCodeforcesSolvesToday(codeforces.handle) : Promise.resolve<null>(null),
       ]);
 
-      // If GitHub is linked, fetch the contribution calendar and render the graph.
+      const contributionsToday = calendar ? countContributionsToday(calendar) : null;
+
       let graphAttachment: AttachmentBuilder | null = null;
-      if (github) {
-        const calendar = await fetchContributionCalendar(github.username);
-        if (calendar) {
-          const graphBuffer = await renderContributionGraph(calendar);
-          graphAttachment = new AttachmentBuilder(graphBuffer, { name: "contribution-graph.png" });
-        }
+      if (calendar) {
+        const graphBuffer = await renderContributionGraph(calendar);
+        graphAttachment = new AttachmentBuilder(graphBuffer, { name: "contribution-graph.png" });
       }
 
       const embed = createEmbed("stats")
@@ -93,11 +102,21 @@ commands.set("dev-stats", {
 
       // ── GitHub ────────────────────────────────────────────────────────────
       if (github) {
-        embed.addFields({
-          name: "📝 GitHub",
-          value: `${todayLine(commitsToday, "commit")}\n[@${github.username}](https://github.com/${github.username})`,
-          inline: true,
-        });
+        // Two distinct numbers, deliberately both shown: what GitHub recorded
+        // today (uncapped, includes private work), and how much of the daily XP
+        // allowance that actually converted into. Reporting only the former
+        // would overstate rewards the way the broadcast copy does (audit N13);
+        // reporting only the latter would understate real activity past the cap.
+        const lines = [todayLine(contributionsToday, "contribution")];
+        if (githubXpAwardsToday !== null) {
+          const capped = githubXpAwardsToday >= MAX_XP_COMMITS_PER_DAY;
+          lines.push(
+            `${githubXpAwardsToday}/${MAX_XP_COMMITS_PER_DAY} XP awards today${capped ? " · daily cap reached" : ""}`
+          );
+        }
+        lines.push(`[@${github.username}](https://github.com/${github.username})`);
+
+        embed.addFields({ name: "📝 GitHub", value: lines.join("\n"), inline: true });
       }
 
       // ── LeetCode ──────────────────────────────────────────────────────────

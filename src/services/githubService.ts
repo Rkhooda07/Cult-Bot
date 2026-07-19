@@ -219,48 +219,31 @@ export async function fetchNewCommits(
 }
 
 /**
- * Count commits pushed today (UTC) from a user's public PushEvents — used by
- * /dev-stats for a live "today" figure (not the XP-capped number). Returns null
- * on API error so /dev-stats can render a graceful placeholder.
+ * Extract today's (UTC) contribution count from an already-fetched contribution
+ * calendar — the "today" figure shown by /dev-stats.
+ *
+ * This deliberately reads the GraphQL calendar rather than the /events/public
+ * feed that an earlier version used. The events feed reports only *public*
+ * activity, so a day spent in private repos rendered as "0 commits today" even
+ * though the poller had detected and awarded that same activity via this very
+ * calendar; the feed is also cached and eventually-consistent, so recent pushes
+ * were routinely missing. The calendar covers public and private alike and is
+ * already fetched on this code path to render the graph, so this costs nothing.
+ *
+ * Note this counts *contributions* (commits, PRs, issues, reviews) as GitHub
+ * defines them, not commits alone — the caller's copy says "contributions"
+ * accordingly. Returns null when today isn't present in the calendar window.
  */
-export async function getCommitsToday(username: string): Promise<number | null> {
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github+json",
-    "User-Agent": "DevOS-Bot",
-    "X-GitHub-Api-Version": "2022-11-28",
-  };
-  if (env.GITHUB_TOKEN) {
-    headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+export function countContributionsToday(calendar: ContributionCalendarData): number | null {
+  const todayUtc = new Date().toISOString().slice(0, 10);
+
+  for (const week of calendar.weeks) {
+    for (const day of week.contributionDays ?? []) {
+      if (day.date === todayUtc) return day.contributionCount;
+    }
   }
 
-  const startOfUtcDay = new Date();
-  startOfUtcDay.setUTCHours(0, 0, 0, 0);
-  const sinceMs = startOfUtcDay.getTime();
-
-  let events: unknown;
-  try {
-    const res = await fetch(
-      `https://api.github.com/users/${encodeURIComponent(username)}/events/public?per_page=100`,
-      { headers }
-    );
-    if (!res.ok) return null;
-    events = await res.json();
-  } catch (err) {
-    logger.error({ err, username }, "githubService: failed to fetch events for getCommitsToday");
-    return null;
-  }
-
-  if (!Array.isArray(events)) return null;
-
-  let count = 0;
-  for (const ev of events) {
-    if (!ev || (ev as any).type !== "PushEvent") continue;
-    const createdAt = (ev as any).created_at;
-    if (!createdAt || new Date(createdAt).getTime() < sinceMs) continue;
-    count += ((ev as any).payload?.commits ?? []).length;
-  }
-
-  return count;
+  return null;
 }
 
 /**
