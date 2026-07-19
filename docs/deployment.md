@@ -1,340 +1,228 @@
-# Deployment — Oracle Cloud Always Free ARM VM
+# Deployment — Koyeb (free tier) + Neon
 
-Runbook for running CultBot unattended 24/7. Written for Oracle's Always Free
-Ampere A1 tier (Ubuntu, arm64), but only Phases 1–3 are Oracle-specific.
+The bot runs as a single container on Koyeb. Postgres is **not** deployed with
+it: the database is Neon (serverless, external), reached over `DATABASE_URL`.
+Production therefore runs exactly one process — the bot — and needs no local
+Postgres container, no reverse proxy, no domain, and no TLS.
+
+> This replaces an earlier Oracle Cloud ARM VM runbook. Oracle was dropped
+> because its account verification requires a payment card. The tradeoff is
+> recorded under *Alternatives* below in case a VM is ever needed again.
+
+---
 
 ## Topology
 
-- **Bot:** a single Docker container on the VM, `restart: unless-stopped`.
-- **Database:** external — Neon serverless Postgres, via `DATABASE_URL` in `.env`.
-  Compose deliberately does **not** override `DATABASE_URL`; an override would
-  point the deployed bot at a different database than it was developed against,
-  and it would come up healthy against an empty schema with every user's XP and
-  todos apparently gone.
-- **Inbound ports: none.** The bot is a pure outbound WebSocket + REST client.
-  No reverse proxy, no domain, no TLS, no open ingress beyond SSH.
+```
+  Koyeb free instance                      Neon (us-east-1)
+  ┌─────────────────────────┐              ┌────────────┐
+  │ node dist/index.js      │─DATABASE_URL─▶│  Postgres  │
+  │  ├─ Discord gateway ────┼─▶ outbound WSS└────────────┘
+  │  └─ HTTP :8000/health ◀─┼── inbound, from the uptime pinger
+  └─────────────────────────┘
+```
 
-Because Neon auto-suspends on idle, `src/cron/dbKeepAlive.ts` keeps the
-connection warm and `DATABASE_URL` carries raised `connect_timeout` /
-`pool_timeout` values. Do not strip those.
+Two details drive everything below:
 
-### ARM compatibility
-
-Verified before deploying:
-- `package-lock.json` pins `@napi-rs/canvas-linux-arm64-musl`, so canvas installs
-  a prebuilt binary rather than compiling from source on Alpine ARM64.
-- `prisma/schema.prisma` sets no `binaryTargets`, so Prisma generates engines for
-  whatever platform runs `prisma generate`. **Build on the VM.** Cross-building
-  from an x64/darwin machine produces the wrong engines.
+- **The gateway connection is outbound.** Free tiers scale to zero on absent
+  *inbound HTTP* traffic. A permanently-connected WebSocket does not count, so
+  without the pinger the instance suspends roughly hourly and the bot drops
+  offline. The pinger is load-bearing, not a nicety.
+- **`DATABASE_URL` must point at Neon.** There is no local DB in this path;
+  `docker-compose.yml` deliberately does not override it. Because Neon
+  auto-suspends on idle, `src/cron/dbKeepAlive.ts` keeps the connection warm and
+  `DATABASE_URL` carries raised `connect_timeout` / `pool_timeout` values. Do
+  not strip those.
 
 ---
 
-## Phase 1 — Provision the VM
+## Why the health endpoint exists
 
-**Expect `Out of host capacity` on Ampere A1.** It is the most common failure,
-it is per-region and per-availability-domain, and it is not a mistake on your
-part. Workarounds, most effective first:
+`src/server/healthServer.ts` runs inside the bot process and serves
+`GET /health` (and `GET /`) on `PORT` (default `8000`).
 
-1. **Upgrade to Pay As You Go.** By far the biggest lever — PAYG requests are
-   served from a higher-priority pool. Always Free resources remain free; set a
-   $0 budget alert.
-2. Retry on a loop via the OCI CLI, ~60s apart. Faster is rate-limited and does
-   not help.
-3. Try every availability domain in the region.
-4. Ask for less: 1 OCPU / 6 GB succeeds far more often than 4 / 24, and the shape
-   can be resized later with a stop/start.
+It is a **liveness** probe, not a readiness one — it returns `200` whenever the
+process is alive, and reports gateway state in the body rather than in the
+status code. Returning `503` on a disconnected gateway would read better, but
+Koyeb restarts an instance whose health check fails, and discord.js reconnects
+on its own after transient drops. A `503` would convert a five-second blip into
+a restart loop, each cycle re-running `prisma migrate deploy`.
 
-Your home region is fixed at signup and cannot be changed.
-
-Settings:
-- **Image:** Canonical Ubuntu 22.04 (aarch64).
-- **Shape:** `VM.Standard.A1.Flex` — 4 OCPU / 24 GB is the entire free ARM
-  allowance.
-- **Boot volume:** 100 GB (free tier allows 200 GB total).
-- **SSH key:** generate locally first and paste the public key at creation time;
-  Oracle's Ubuntu images have no password fallback.
-
-```bash
-ssh-keygen -t ed25519 -C "cultbot-oracle" -f ~/.ssh/oracle_cultbot
-pbcopy < ~/.ssh/oracle_cultbot.pub
+```json
+{
+  "status": "ok",
+  "discord": { "connected": true, "wsPing": 62, "guilds": 2, "user": "cult-bot#9905" },
+  "uptimeSeconds": 3471
+}
 ```
 
-Login user is `ubuntu`. **Reserve the public IP immediately** — Instance →
-Attached VNICs → IPv4 Addresses → Edit → Reserved. The ephemeral address is lost
-on stop/start.
+`wsPing` is `null` for the first ~41 seconds of uptime — discord.js reports
+`-1` until the first heartbeat ack. Not a fault.
+
+It binds `0.0.0.0`, never `localhost`. A loopback bind inside a container is
+invisible to the platform's health checker and the deploy fails with no useful
+error. It also starts *before* `client.login()`, so a slow handshake surfaces as
+an answering-but-not-yet-connected service rather than a port that never opens.
 
 ---
 
-## Phase 2 — SSH and hardening
+## Phase 1 — Koyeb account
+
+1. Sign up at [koyeb.com](https://www.koyeb.com) with **GitHub** — it doubles as
+   the repo connection in Phase 2.
+2. If Koyeb asks for a payment card to verify, stop and reconsider the host (see
+   *Alternatives*). Free-tier terms change; this runbook assumes the one free
+   instance is available without one.
+
+## Phase 2 — Create the service
+
+**Create Web Service** → **GitHub** → authorize → pick `Rkhooda07/cult-bot`.
+
+| Setting | Value | Why |
+|---|---|---|
+| Builder | **Dockerfile** | *Not* buildpacks. `@napi-rs/canvas` and the Prisma engines need the exact image the Dockerfile builds. |
+| Branch | `main` | |
+| Autodeploy | **on** | Pushes to `main` redeploy automatically. |
+| Instance | **Free** (0.1 vCPU / 512 MB) | |
+| Region | **Washington, D.C.** | Neon is in `us-east-1`. Frankfurt adds ~90 ms to *every* query. |
+| Port | **8000**, HTTP | Must match `PORT`. |
+| Health check path | `/health` | |
+
+## Phase 3 — Environment variables
+
+Set in Koyeb's dashboard, **never** in the repo. Mark `DISCORD_TOKEN`,
+`DATABASE_URL`, and `GITHUB_TOKEN` as **Secret** so they are write-only after
+saving.
+
+| Variable | Notes |
+|---|---|
+| `DISCORD_TOKEN` | Required. |
+| `DISCORD_CLIENT_ID` | Required. |
+| `DATABASE_URL` | Required. The full Neon pooler URI including `?sslmode=require`. |
+| `GITHUB_TOKEN` | Optional at boot, required for the GitHub integration to function. |
+| `PORT` | Leave unset — Koyeb injects it. |
+
+Do **not** set `BOT_ICON_URL` or `AUTO_SET_AVATAR`; the footer icon falls back
+to the bot's uploaded Discord avatar.
+
+## Phase 4 — Keep-alive pinger
+
+Without this the instance sleeps after ~1 h idle and the bot goes offline.
+
+**cron-job.org:**
+
+1. Create account → **Create cronjob**
+2. URL: `https://<your-app>-<org>.koyeb.app/health`
+3. Schedule: **every 5 minutes**
+4. Save, then **Test run** — expect `200` and the JSON above.
+
+UptimeRobot works equally well (HTTP(s) monitor, 5-minute interval) and adds
+down-alerts by email.
+
+Pick **5 minutes, not 10.** Ten leaves no margin: two consecutive failed pings
+puts you at a 20-minute gap against an idle timer whose exact threshold Koyeb
+does not contractually guarantee.
+
+## Phase 5 — Register slash commands
+
+Only needed on first deploy and whenever a command *definition* changes:
 
 ```bash
-chmod 600 ~/.ssh/oracle_cultbot
-ssh -i ~/.ssh/oracle_cultbot ubuntu@<PUBLIC_IP>
-```
-
-`~/.ssh/config` on the workstation:
-
-```
-Host cultbot
-  HostName <RESERVED_IP>
-  User ubuntu
-  IdentityFile ~/.ssh/oracle_cultbot
-  IdentitiesOnly yes
-  ServerAliveInterval 60
-```
-
-### Two firewalls, not one
-
-Traffic must pass **both** the Oracle Security List (cloud-side, in the VCN) and
-the instance's own iptables. Oracle's Ubuntu images ship a populated
-`/etc/iptables/rules.v4` managed by `netfilter-persistent` that ends in a
-`REJECT all` rule. This is why "I opened the port in the console and it still
-doesn't work" is the most common Oracle question.
-
-For this bot that is a feature — it needs no inbound ports:
-
-- Leave only the default `22/tcp` ingress in the Security List. Open nothing else.
-- **Do not install ufw.** Layering it over Oracle's existing rules produces two
-  independent rule sets and commonly locks people out of SSH with no recovery
-  path. Oracle's defaults already do what is wanted here.
-
-Inspect with `sudo iptables -L INPUT -n --line-numbers`.
-
-### sshd
-
-```bash
-sudo sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-sudo sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-```
-
-On Ubuntu 22.04+, files in `/etc/ssh/sshd_config.d/` are `Include`d first and
-win, and Oracle drops one there. Always verify:
-
-```bash
-sudo grep -rE 'PasswordAuthentication|PermitRootLogin' /etc/ssh/sshd_config.d/ /etc/ssh/sshd_config
-sudo sshd -t && sudo systemctl restart ssh
-```
-
-Keep the current session open and confirm from a second terminal before closing it.
-
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y fail2ban unattended-upgrades
-printf '[sshd]\nenabled = true\nmaxretry = 4\nbantime = 1h\n' | sudo tee /etc/fail2ban/jail.local
-sudo systemctl enable --now fail2ban
-sudo dpkg-reconfigure -plow unattended-upgrades
-```
-
-Do **not** enable `Unattended-Upgrade::Automatic-Reboot`. An unattended reboot
-mid-migration is the scenario the graceful-shutdown handler exists to avoid.
-
----
-
-## Phase 3 — Docker on ARM64
-
-Use the official Docker apt repo — `apt install docker.io` ships an old engine
-and no compose plugin. Note `arch=arm64`:
-
-```bash
-sudo apt install -y ca-certificates curl gnupg
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-sudo usermod -aG docker $USER && newgrp docker
-sudo systemctl enable --now docker containerd
-systemctl is-enabled docker    # MUST print "enabled"
-docker compose version
-```
-
-`systemctl is-enabled docker` is non-negotiable. If the daemon is not enabled at
-boot, `restart: unless-stopped` means nothing and the bot silently never returns
-after a reboot — the most common "it died and I didn't notice" cause.
-
----
-
-## Phase 4 — Clone the private repo
-
-Use a **read-only deploy key**: scoped to this repo alone, revocable from the
-repo's own settings, no expiry churn, and the private key never leaves the VM.
-(A PAT is account-scoped, expires silently months later, and ends up in plaintext
-in `~/.git-credentials` or baked into `.git/config`.)
-
-```bash
-# on the VM
-ssh-keygen -t ed25519 -C "cultbot-deploy" -f ~/.ssh/gh_deploy -N ""
-cat ~/.ssh/gh_deploy.pub
-```
-
-Add that key at GitHub → repo → Settings → Deploy keys → **leave "Allow write
-access" unchecked**.
-
-```bash
-cat >> ~/.ssh/config <<'EOF'
-Host github.com
-  IdentityFile ~/.ssh/gh_deploy
-  IdentitiesOnly yes
-EOF
-chmod 600 ~/.ssh/config
-ssh -T git@github.com          # expect "successfully authenticated"
-git clone git@github.com:<owner>/<repo>.git ~/cultbot
-```
-
----
-
-## Phase 5 — `.env` onto the VM
-
-`.env` is gitignored and must be transferred out of band.
-
-```bash
-# from the workstation, repo root
-scp .env cultbot:~/cultbot/.env
-# on the VM
-chmod 600 ~/cultbot/.env && ls -l ~/cultbot/.env    # -rw-------
-```
-
-Required: `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DATABASE_URL` (the Neon URL,
-including its `connect_timeout` / `pool_timeout` parameters).
-
-Recommended: `GITHUB_TOKEN` — the GitHub poller runs every 2 minutes and
-unauthenticated REST is capped at 60 requests/hour, so the integration is
-effectively dead without it.
-
-Leave unset: `BOT_ICON_URL` (the footer icon falls back to the bot's
-Discord-hosted avatar) and `AUTO_SET_AVATAR` (`src/assets/` is not copied into
-the runtime image, so it cannot work in Docker — upload the icon via the
-Developer Portal instead).
-
----
-
-## Phase 6 — First run
-
-```bash
-cd ~/cultbot
-docker compose build      # separately, so build errors are readable
-docker compose up -d
-docker compose logs -f
-```
-
-Expect **6–14 minutes** for a cold build on 4 Ampere cores; 25–40 minutes on a
-1 OCPU shape — use `tmux` so an SSH drop doesn't kill it. The two
-`npx prisma generate` runs are the slowest steps and are network-bound.
-
-Troubleshooting:
-- node-gyp / cairo errors → the lockfile lost its ARM optional dependency.
-  Regenerate the lockfile; do not install build tools.
-- `Unable to require libquery_engine` → musl/OpenSSL mismatch. Add
-  `binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]` to
-  `schema.prisma` rather than switching base images.
-
-### Verify
-
-```bash
-docker compose ps
-docker compose exec bot npx prisma migrate status
-docker compose logs bot | grep -iE "bot ready|error"
-```
-
-Any migration showing `finished_at IS NULL` indicates an interrupted migration;
-resolve it with `prisma migrate resolve` before continuing.
-
-### Register slash commands
-
-```bash
-docker compose run --rm bot node dist/deploy-commands.js
+npm run deploy    # from your Mac; reads .env, talks only to Discord's API
 ```
 
 Global registration takes up to an hour to propagate.
 
-Confirm **Server Members Intent** is enabled in the Developer Portal (Bot →
-Privileged Gateway Intents). `src/index.ts` requests `GuildMembers`; without it
-`client.login` throws `Used disallowed intents` and the container restart-loops.
+Also confirm **Server Members Intent** is enabled in the Discord Developer
+Portal (Bot → Privileged Gateway Intents). `src/index.ts` requests
+`GuildMembers`; without it `client.login()` throws `Used disallowed intents`
+and the instance restart-loops.
 
 ---
 
-## Phase 7 — Logs and health
+## Verifying a deploy
 
 ```bash
-docker compose logs -f --tail=100 bot
-docker compose logs --since 10m bot
-docker inspect -f '{{.RestartCount}} {{.State.Status}}' $(docker compose ps -q bot)
-sudo journalctl -u docker -n 100 --no-pager
+# 1. Health endpoint — the single most informative check
+curl -s https://<your-app>.koyeb.app/health | jq
 ```
 
-There is no HTTP health endpoint (adding one would mean opening a port), so
-health is inferred from container state plus recent errors:
+`connected: true` with `guilds > 0` means the gateway is genuinely up.
+`connected: false` on a large `uptimeSeconds` means a wedged bot — redeploy.
+
+**2. Logs** — Koyeb dashboard → service → **Logs** (`Runtime`, not `Build`).
+A clean boot looks like:
+
+```
+Health server listening on 0.0.0.0
+No pending migrations to apply
+Logged in as cult-bot#9905
+```
+
+**3. Migration state.** This is the failure mode the `exec` in the Dockerfile
+`CMD` exists to prevent, so verify it at least once after a redeploy:
 
 ```bash
-docker compose ps --format '{{.Service}} {{.State}}' && \
-docker compose logs --since 5m bot 2>&1 | grep -ciE 'error|fatal|ECONNREFUSED'
+npx prisma migrate status    # from your Mac, against the same Neon DB
 ```
 
-Optional Discord-webhook alert via cron. Note it only catches "container not
-running" — a process that is alive but disconnected from the gateway will not
-trigger it:
+Expect *"Database schema is up to date"*. If a migration is ever reported as
+failed, one boot was SIGKILLed mid-`migrate deploy` and left a
+`_prisma_migrations` row with `finished_at IS NULL`. Every subsequent boot then
+fails until you run `npx prisma migrate resolve --applied <migration_name>`.
 
-```
-*/10 * * * * cd /home/ubuntu/cultbot && [ "$(docker compose ps -q bot | xargs -r docker inspect -f '{{.State.Running}}')" = "true" ] || curl -s -X POST -H 'Content-Type: application/json' -d '{"content":"CultBot is DOWN"}' <WEBHOOK_URL>
-```
+Why it should not happen: Koyeb sends `SIGTERM` on redeploy, the Dockerfile
+`exec`s so node is PID 1 and receives it, and `src/index.ts` handles it and
+exits 0 in ~3 s rather than hanging until a `SIGKILL`.
 
-Log growth is bounded by the `logging` block in `docker-compose.yml`
-(10 MB × 3 files per service). Without it, seven cron jobs on 60s–15min
-intervals fill the boot volume on a real timeline.
+**4. Concurrent migrations.** Koyeb's rolling deploy briefly runs the new
+instance while the old one still lives, so two `prisma migrate deploy` calls can
+overlap against one Neon database. Prisma takes a Postgres advisory lock for
+exactly this, so the second waits rather than corrupting state — but a deploy
+carrying a slow migration can take noticeably longer than a normal one.
 
 ---
 
-## Phase 8 — Reboot test
-
-Do not consider the deployment done until this passes. It is the step that
-proves the entire exercise.
+## Redeploy loop
 
 ```bash
-sudo reboot
-# wait ~45s
-ssh cultbot
-systemctl is-enabled docker && systemctl is-active docker
-cd ~/cultbot && docker compose ps
-docker compose logs --tail=50 bot
-```
-
-Expected: the container is `Up` and `migrate deploy` reports no pending
-migrations. An empty `docker compose ps` means `docker.service` was never
-enabled at boot.
-
----
-
-## Phase 9 — Swap
-
-Not needed on 24 GB — runtime footprint is roughly 150–300 MB for Node, and with
-an external database there is no Postgres process on the box at all.
-
-On a smaller shape, add 2 GB as build insurance (the build, not the runtime, is
-the memory peak):
-
-```bash
-sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
-sudo mkswap /swapfile && sudo swapon /swapfile
-echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-swap.conf
+git push origin main       # autodeploy handles the rest
+npm run deploy             # only when a command definition changed
 ```
 
 ---
 
-## Redeploy
+## Resource headroom
 
-```bash
-ssh cultbot
-cd ~/cultbot && git pull && docker compose up -d --build
-# only when a command definition changed:
-docker compose run --rm bot node dist/deploy-commands.js
-```
+512 MB is comfortable but not generous. Steady state is roughly 250–350 MB:
+Node baseline (~60 MB), discord.js with the `GuildMembers` cache for ~50 members
+(small), the Prisma query engine (~80 MB), and `@napi-rs/canvas`, which
+allocates its bitmap only while rendering a `/dev-stats` contribution graph.
+
+If Koyeb reports OOM kills, that render is the first place to look — it is the
+only allocation that spikes.
+
+---
+
+## Alternatives, if the Koyeb free tier disappears
+
+- **Fly.io** — same shape (Dockerfile, scale-to-zero, external DB). Needs a card
+  on file even for free allowances.
+- **A Raspberry Pi / spare machine at home** — the only option that depends on
+  nobody's free tier. Same Docker image, `restart: unless-stopped`, and no
+  pinger needed since nothing scales to zero.
+- **Oracle Cloud Always Free ARM VM** — genuinely free and generous (4 OCPU /
+  24 GB), needs no keep-alive pinger, but requires card verification at signup
+  and Ampere A1 capacity is frequently unavailable. If revisiting: build on the
+  VM, not cross-built from macOS — `prisma/schema.prisma` sets no
+  `binaryTargets`, so engines are generated for whatever platform runs
+  `prisma generate`.
+
+---
 
 ## Secret handling
 
-Never run `docker compose config` on a shared terminal or paste its output
-anywhere — it interpolates `env_file` values and prints `DISCORD_TOKEN` and the
-full `DATABASE_URL` in clear text. Use `docker compose config --services` or
-`--quiet` to validate without rendering secrets.
+Never run `docker compose config` without `--services` or `--quiet`. It
+interpolates `env_file` values and prints `DISCORD_TOKEN` and the Neon password
+in cleartext to the terminal — and therefore into any scrollback, log, or
+transcript.

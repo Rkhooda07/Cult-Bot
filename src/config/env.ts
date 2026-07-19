@@ -31,6 +31,12 @@ const envSchema = z.object({
   // once on startup. Discord rate-limits avatar changes heavily, so this is
   // opt-in and never retried — see .env.example and events/ready.ts.
   AUTO_SET_AVATAR: z.string().optional(),
+  // Port for the health endpoint (src/server/healthServer.ts). Injected by the
+  // hosting platform — Koyeb sets PORT=8000 — so it is a string here and is
+  // coerced, not required. 8000 matches Koyeb's default so local and deployed
+  // behaviour agree. Never bind this to a fixed literal: a platform that picks
+  // its own port will fail every health check against a hardcoded one.
+  PORT: z.coerce.number().int().positive().default(8000),
 });
 
 function validateEnv() {

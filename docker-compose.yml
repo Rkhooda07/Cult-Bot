@@ -32,17 +32,16 @@ services:
     # to wait for. If Neon is mid-cold-start when the bot boots, the raised
     # connect_timeout in DATABASE_URL covers it.
     init: true
-    # migrate (apply any pending schema changes) -> seed (badge rows the
-    # auto-award system needs; upsert, so safe to re-run every start) -> bot.
-    #
-    # `exec` on the last command is load-bearing, not style: without it `sh`
-    # stays PID 1 and does NOT forward SIGTERM to node, so the graceful-shutdown
-    # handlers in src/index.ts would never fire and every `docker compose down`
-    # or redeploy would hang 10s then SIGKILL. A SIGKILL landing mid-`migrate
-    # deploy` leaves a _prisma_migrations row with finished_at NULL, which makes
-    # the NEXT boot fail until someone runs `prisma migrate resolve` by hand.
-    command: >
-      sh -c "npx prisma migrate deploy && node dist/seed.js && exec node dist/index.js"
+    # No `command:` override. The migrate -> seed -> exec chain now lives in the
+    # Dockerfile CMD, because the production deploy (Koyeb) builds from the
+    # Dockerfile alone and never reads this file. Duplicating it here would mean
+    # two copies to keep in sync, and the compose one silently winning locally —
+    # so local and production would drift apart without anyone noticing.
+    # See the Dockerfile for why `exec` is load-bearing.
+    ports:
+      # Health endpoint, for checking the same /health locally that the uptime
+      # pinger hits in production. Loopback-bound: nothing needs it from outside.
+      - "127.0.0.1:8000:8000"
     logging: *default-logging
 
   # ── Local development only — not started unless --profile local-db is passed ──

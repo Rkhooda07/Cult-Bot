@@ -4,7 +4,12 @@ import { logger } from "./utils/logger";
 import { setClient } from "./utils/client";
 import { startTimer, logTiming, timingEnabled } from "./utils/timing";
 
+import type { Server } from "node:http";
+
 const processStart = startTimer();
+
+// Held at module scope so shutdown() can close it. Assigned in main().
+let healthServer: Server | undefined;
 
 // ── Import command modules (side-effect: registers into commands / buttonHandlers / …) ──
 import "./commands/ping/ping";
@@ -96,6 +101,14 @@ async function main() {
   startDbKeepAlive();
   logTiming("startup:cron jobs registered", stop());
 
+  // Start the health endpoint BEFORE login, not after. client.login() is a
+  // network round-trip that can take seconds (or hang outright on a bad token),
+  // and the hosting platform starts probing the port as soon as the container
+  // runs. Listening first means a slow or failing gateway handshake shows up as
+  // an unhealthy-but-answering service instead of a deploy that never binds.
+  const { startHealthServer } = await import("./server/healthServer");
+  healthServer = startHealthServer(client);
+
   stop = startTimer();
   await client.login(env.DISCORD_TOKEN);
   logTiming("startup:client.login (gateway handshake)", stop());
@@ -136,6 +149,11 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true;
 
   logger.info({ signal }, "Shutting down");
+
+  // Stop accepting health probes first, so the platform's load balancer stops
+  // routing to this instance while the gateway and DB are still tearing down.
+  // close() only stops new connections; process.exit(0) below handles the rest.
+  healthServer?.close();
 
   try {
     // getClient() throws if a signal arrives before main() reached setClient();

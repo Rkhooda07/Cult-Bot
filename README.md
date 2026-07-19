@@ -71,7 +71,7 @@
 - **Dates:** `luxon` + `chrono-node`
 - **Rendering:** `@napi-rs/canvas` for contribution graphs
 - **Logging:** `pino` (+ `pino-pretty` in dev)
-- **Deployment:** Docker + Docker Compose (bot + Postgres)
+- **Deployment:** Docker → Koyeb (bot only); Postgres is external (Neon)
 
 ---
 
@@ -136,7 +136,9 @@ docker compose run --rm bot node dist/deploy-commands.js
 
 `src/deploy-commands.ts` is compiled into `dist/` by the normal build, so this runs inside the production image and registers exactly the commands that shipped. (It reads `.env` directly and will fail on a missing `DATABASE_URL` even though it never queries the database.) Global registration takes up to an hour to propagate.
 
-See [`docs/deployment.md`](docs/deployment.md) for the full Oracle Cloud ARM VM runbook.
+The container also serves `GET /health` on `PORT` (default `8000`) — used by the host's health checks and by an external uptime pinger that stops a free-tier instance scaling to zero. Check it locally with `curl -s localhost:8000/health`.
+
+See [`docs/deployment.md`](docs/deployment.md) for the full Koyeb deployment runbook.
 
 A recent performance pass reduced startup and interaction latency (early `deferReply`, parallelized independent DB reads, added indexes on hot foreign keys, and hardened against serverless-Postgres cold starts).
 
@@ -153,6 +155,7 @@ Read from [`src/config/env.ts`](src/config/env.ts) and validated with `zod` at b
 | `DATABASE_URL` | ✅ | PostgreSQL connection string. |
 | `GITHUB_TOKEN` | ⚠️ | Optional at boot, but **required in practice for the GitHub integration to function**. The poller runs every 2 minutes; unauthenticated REST is capped at 60 requests/hour and the GraphQL private-activity check rejects unauthenticated requests outright. The bot starts without it and logs a warning — omit it only if you won't use `/link github`. |
 | `BOT_ICON_URL` | — | Optional **override** for the embed footer icon. Not needed normally — the footer defaults to the bot's own Discord-hosted avatar, so it works with no config once the bot has a profile picture. Set this only to show a different image. Must be a public HTTPS URL Discord can fetch anonymously; blank is treated as unset. |
+| `PORT` | — | Port for the `/health` endpoint. Defaults to `8000`; hosting platforms inject their own. Never hardcode it — a platform that picks its own port will fail every health check against a fixed one. |
 | `AUTO_SET_AVATAR` | — | Optional. When exactly `"true"`, the bot sets its own avatar once on startup. Off by default; never retried (Discord rate-limits avatar changes). Uploading the icon manually via the Developer Portal is the recommended path. |
 
 ---
