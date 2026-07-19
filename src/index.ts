@@ -123,13 +123,14 @@ async function main() {
 /**
  * Graceful shutdown (audit finding M10).
  *
- * Without this, `docker stop` sends SIGTERM, nothing handles it, and Docker
- * waits the full 10s grace period before SIGKILL — on every redeploy and every
- * reboot. The delay is the visible symptom; the real hazard is that the
- * container's start command runs `prisma migrate deploy`, and a SIGKILL landing
- * mid-migration leaves a _prisma_migrations row with finished_at NULL. The next
- * boot then fails with "migration failed to apply cleanly" and needs a manual
- * `prisma migrate resolve` — an unattended deployment bricking itself.
+ * Without this, a host restarting the process sends SIGTERM, nothing handles it,
+ * and the process is SIGKILLed after the grace period — on every redeploy and
+ * every reboot. The delay is the visible symptom; the real hazard is a SIGKILL
+ * landing mid-migration on deploy paths that run `prisma migrate deploy` at
+ * boot (the Dockerfile does), which leaves a _prisma_migrations row with
+ * finished_at NULL. The next boot then fails with "migration failed to apply
+ * cleanly" and needs a manual `prisma migrate resolve` — an unattended
+ * deployment bricking itself.
  *
  * Deliberately does NOT stop the seven cron tasks individually: every
  * start*Poller() returns void, so capturing handles would mean touching seven
@@ -149,6 +150,17 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true;
 
   logger.info({ signal }, "Shutting down");
+
+  // Watchdog: if any step below hangs (a wedged gateway socket, a DB pool that
+  // will not drain), exit anyway rather than sitting unkillable until the host
+  // SIGKILLs us. Non-zero exit, because a shutdown that had to be forced is not
+  // a clean one and should be visible as such in the host's logs.
+  // unref() so this timer alone never keeps the event loop alive.
+  const watchdog = setTimeout(() => {
+    logger.error({ signal }, "Graceful shutdown timed out after 10s — forcing exit");
+    process.exit(1);
+  }, 10_000);
+  watchdog.unref();
 
   // Stop accepting health probes first, so the platform's load balancer stops
   // routing to this instance while the gateway and DB are still tearing down.
