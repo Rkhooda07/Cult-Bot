@@ -71,7 +71,7 @@
 - **Dates:** `luxon` + `chrono-node`
 - **Rendering:** `@napi-rs/canvas` for contribution graphs
 - **Logging:** `pino` (+ `pino-pretty` in dev)
-- **Deployment:** Docker → Koyeb (bot only); Postgres is external (Neon)
+- **Deployment:** plain Node process → KataBump (bot only); Postgres is external (Supabase/Neon). Docker is a separate self-hosting option.
 
 ---
 
@@ -136,9 +136,9 @@ docker compose run --rm bot node dist/deploy-commands.js
 
 `src/deploy-commands.ts` is compiled into `dist/` by the normal build, so this runs inside the production image and registers exactly the commands that shipped. (It reads `.env` directly and will fail on a missing `DATABASE_URL` even though it never queries the database.) Global registration takes up to an hour to propagate.
 
-The container also serves `GET /health` on `PORT` (default `8000`) — used by the host's health checks and by an external uptime pinger that stops a free-tier instance scaling to zero. Check it locally with `curl -s localhost:8000/health`.
+The bot also serves `GET /health` on `PORT` (default `8000`), reporting gateway state. Optional on KataBump, which does not scale to zero; retained for observability and for the Docker path. Check it locally with `curl -s localhost:8000/health`.
 
-See [`docs/deployment.md`](docs/deployment.md) for the full Koyeb deployment runbook.
+See [`docs/deployment.md`](docs/deployment.md) for the full KataBump + Supabase/Neon deployment runbook.
 
 A recent performance pass reduced startup and interaction latency (early `deferReply`, parallelized independent DB reads, added indexes on hot foreign keys, and hardened against serverless-Postgres cold starts).
 
