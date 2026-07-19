@@ -165,7 +165,7 @@ Every command is a single entry point; the rest of each flow is buttons, select 
 | `/level` | View your current level and XP progress bar. |
 | `/badges` | View your earned and locked productivity badges. |
 | `/link` | Link an external dev account (GitHub / LeetCode / Codeforces) to earn XP. |
-| `/dev-stats` | Your combined dev activity today across GitHub, LeetCode, and Codeforces. |
+| `/dev-stats` | Your combined dev activity today across GitHub, LeetCode, and Codeforces. Posts publicly. |
 | `/leaderboard` | View the guild leaderboard (top 10 by XP). |
 | `/board` | View the server todo completion board (shared public view). |
 | `/challenge` | Community challenges — `create` (admin) and `complete` subcommands. |
@@ -208,7 +208,7 @@ Dockerfile
 - **One slash command per domain** — everything after the entry point is a component interaction.
 - **customId format** `domain:action:ownerId:entityId` — the router verifies ownership before dispatching.
 - **All replies are embeds** — no bare-string replies.
-- **Personal data is ephemeral; social data is public** — subject to opt-in/opt-out settings.
+- **Personal data is ephemeral; social data is public** — subject to opt-in/opt-out settings. `/dev-stats` is the deliberate exception: it shows only the caller's own data, so running it *is* the choice to share.
 
 ---
 

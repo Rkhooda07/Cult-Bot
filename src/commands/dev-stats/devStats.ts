@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags, AttachmentBuilder } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, AttachmentBuilder } from "discord.js";
 import { commands } from "../../registry";
 import { createEmbed, createErrorEmbed } from "../../utils/embedFactory";
 import { logger } from "../../utils/logger";
@@ -25,7 +25,7 @@ import { renderContributionGraph } from "../../utils/contributionGraphRenderer";
  *   - 1/2/3 linked → one field per linked source; unlinked sources are listed
  *     compactly with a hint so the panel is self-documenting.
  *
- * Live figures are fetched on demand (ephemeral), so a source whose API call
+ * Live figures are fetched on demand, so a source whose API call
  * fails renders "couldn't fetch" rather than breaking the whole embed.
  */
 
@@ -42,7 +42,12 @@ commands.set("dev-stats", {
     .setDescription("Your combined dev activity today across GitHub, LeetCode, and Codeforces"),
 
   execute: async (interaction: ChatInputCommandInteraction) => {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    // Public, unlike the other personal panels. /dev-stats only ever renders the
+    // caller's own linked-account data, so running it is itself the decision to
+    // share — the show-off case, not a standing broadcast. No settings toggle
+    // guards this; opt-out settings govern automatic surfaces (broadcasts,
+    // leaderboard, board), not a command the user chose to run.
+    await interaction.deferReply();
 
     try {
       // Upsert-with-include in one round trip instead of ensureUser() + a separate findUnique.
