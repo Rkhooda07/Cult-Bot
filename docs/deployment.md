@@ -31,22 +31,33 @@ migrations out of the start command removes the entire class of
 
 ---
 
-## Commands
+## ⚠️ Free-tier renewal — this host is not unattended
 
-| Stage | Command |
-|---|---|
-| Install | `npm install` |
-| Build | `npm run build` |
-| Start | `npm start` |
+**Free KataBump servers expire every 4 days and must be renewed by hand**, and
+only within the 2 days before expiry. At expiration the server suspends; **one
+day later the server and all files are permanently deleted.**
 
-`npm run build` is `prisma generate && tsc`. The `prisma generate` is load
-bearing on a fresh host — `@prisma/client`'s own postinstall hook does not fire
-reliably across every install and cache path, and without a generated client the
-first query throws at runtime rather than at build time.
+Nothing in this repo can automate that. If the bot must run unattended for more
+than 4 days at a stretch, this host is the wrong choice — see *Alternatives*.
+The database is external, so a deletion loses the deployment, not user data.
 
-`npm start` is `node dist/index.js`. It requires **no** `ts-node` and no dev
-dependencies at runtime. If KataBump lets you prune dev dependencies after the
-build step, that is safe.
+---
+
+## Build model — there is no build step
+
+KataBump installs `package.json` dependencies and runs an entry point file. It
+does **not** run `npm run build`. Two consequences drive the whole flow below:
+
+- **TypeScript must be compiled before upload.** You run `npm run build` on your
+  own machine and upload the resulting `dist/`. Note `dist/` is gitignored, so
+  it does not arrive via a git-based flow — it is uploaded directly.
+- **Prisma engines must be generated on the host, not copied.** They are
+  platform-specific; engines generated on macOS will not run on KataBump's
+  Linux. `package.json` has a `postinstall": "prisma generate"` hook precisely
+  because it is the only script this host runs.
+
+`npm start` is `node dist/index.js` — no `ts-node`, no dev dependencies at
+runtime.
 
 **`npm run deploy` is not part of this sequence.** Command registration uses
 `ts-node` and talks only to Discord's API — never to the database — so it runs
@@ -186,7 +197,7 @@ reports `-1` until the first heartbeat ack. Not a fault.
 ## Redeploy loop
 
 ```bash
-git push origin main    # if autodeploy is enabled; otherwise trigger in the dashboard
+npm run build           # locally — then re-upload dist/ and restart in the panel
 ```
 
 Only when a migration was added:
@@ -299,16 +310,36 @@ data-threatening on this path, since migrations do not run at boot here.
 
 ## Resource notes
 
-Steady state is roughly 250–350 MB: Node baseline (~60 MB), discord.js with the
-`GuildMembers` cache, the Prisma query engine (~80 MB), and `@napi-rs/canvas`,
-which allocates its bitmap only while rendering a `/dev-stats` contribution
-graph. If the host reports OOM kills, that render is the only allocation that
-spikes and is the first place to look.
+**KataBump free gives 308 MB RAM and 716 MB storage.** Measured idle RSS of this
+bot is **162 MB** (`ps -o rss=` against `node dist/index.js`, ~25 s after boot,
+2 guilds). That leaves roughly 145 MB of headroom.
 
-`@napi-rs/canvas` ships prebuilt native binaries. If KataBump's architecture
-differs from your Mac's, it resolves the correct one at install time — but this
-is the one dependency that would fail on an unusual platform, and it fails at
-install, not at runtime.
+The headroom matters because `@napi-rs/canvas` allocates its bitmap while
+rendering a `/dev-stats` contribution graph — the only allocation that spikes,
+and therefore the first suspect for any OOM kill. Memory scales with guild count
+and the `GuildMembers` cache too, so re-measure if the bot joins larger servers.
+
+`node_modules` is ~364 MB installed, about half the 716 MB storage allowance.
+Comfortable, but not room for much else.
+
+`@napi-rs/canvas` ships prebuilt native binaries and resolves the right one at
+install time. It is the one dependency that would fail on an unusual platform,
+and it fails at install rather than at runtime.
+
+---
+
+## Alternatives, if the 4-day renewal becomes untenable
+
+The renewal cycle, not the resource limits, is the reason to leave.
+
+- **Fly.io** — Dockerfile-based, genuinely unattended. Card on file even for
+  free allowances.
+- **Koyeb** — the previous target; this repo still carries its health endpoint.
+  Needs an external uptime pinger to stop free instances scaling to zero.
+- **A Raspberry Pi or spare machine at home** — the only option depending on
+  nobody's free tier. Use the Docker path with `restart: unless-stopped`.
+- **KataBump paid tier** — removes the renewal requirement; cheapest fix if the
+  rest of the setup already works.
 
 ---
 
