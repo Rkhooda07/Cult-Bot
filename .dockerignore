@@ -1,0 +1,31 @@
+# Build context exclusions.
+#
+# The Dockerfile copies only package files, tsconfig, prisma/ and src/, so
+# nothing secret reaches the image regardless. What this file prevents is the
+# whole context being streamed to the daemon on every build — most of it
+# node_modules, which on a dev machine holds platform-native binaries
+# (@napi-rs/canvas, prisma engines) for the WRONG architecture when the target
+# is ARM. Excluding it also guarantees `npm ci` resolves fresh inside the image.
+
+node_modules
+dist
+.git
+.gitignore
+
+# Never ship real secrets into a build context.
+.env
+.env.*
+!.env.example
+
+# Docs and tooling — irrelevant to the build.
+*.md
+docs
+.claude
+AUDIT_REPORT.md
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.swp

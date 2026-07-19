@@ -1,36 +1,75 @@
-version: "3.9"
+# Compose v2 — the top-level `version:` key is obsolete and warns on every command.
+#
+# Production topology: the bot runs here, Postgres does NOT. The database is
+# Neon (serverless Postgres), reached via DATABASE_URL from .env. That is why
+# src/cron/dbKeepAlive.ts exists and why .env.example documents raised
+# connect_timeout/pool_timeout values — Neon auto-suspends on idle and the first
+# query after a suspend has to wait out a cold start.
+#
+# The postgres service below is therefore OPT-IN, for local development only.
+# It does not start by default:
+#     docker compose up -d                      # bot only, uses Neon
+#     docker compose --profile local-db up -d   # bot + local Postgres
+# When using the local DB, point DATABASE_URL at localhost:5432 in .env.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    # No DATABASE_URL override here on purpose. An override would silently point
+    # the deployed bot at a different database than the one it was developed
+    # against — the bot would come up healthy against an empty schema and every
+    # user's XP, streaks and todos would appear to have vanished.
+    #
+    # No depends_on either: the database is external, so there is nothing local
+    # to wait for. If Neon is mid-cold-start when the bot boots, the raised
+    # connect_timeout in DATABASE_URL covers it.
+    init: true
+    # migrate (apply any pending schema changes) -> seed (badge rows the
+    # auto-award system needs; upsert, so safe to re-run every start) -> bot.
+    #
+    # `exec` on the last command is load-bearing, not style: without it `sh`
+    # stays PID 1 and does NOT forward SIGTERM to node, so the graceful-shutdown
+    # handlers in src/index.ts would never fire and every `docker compose down`
+    # or redeploy would hang 10s then SIGKILL. A SIGKILL landing mid-`migrate
+    # deploy` leaves a _prisma_migrations row with finished_at NULL, which makes
+    # the NEXT boot fail until someone runs `prisma migrate resolve` by hand.
+    command: >
+      sh -c "npx prisma migrate deploy && node dist/seed.js && exec node dist/index.js"
+    logging: *default-logging
+
+  # ── Local development only — not started unless --profile local-db is passed ──
   postgres:
+    profiles: ["local-db"]
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: devos
-      POSTGRES_PASSWORD: devos_password
+      # Default is fine here precisely because this service is local-only and
+      # bound to the loopback interface below. Never used in production.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devos_password}
       POSTGRES_DB: devos
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Bound to 127.0.0.1 explicitly, not 0.0.0.0. A bare "5432:5432" listens on
+    # every interface — and Docker's publish rules live in FORWARD/nat, which are
+    # evaluated BEFORE a host firewall's INPUT chain, so on a public VM that
+    # would expose Postgres to the internet regardless of the firewall.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U devos -d devos"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  bot:
-    build: .
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql://devos:devos_password@postgres:5432/devos
-    # migrate (create tables) -> seed (badge rows the auto-award system needs;
-    # upsert, so it's safe to re-run every start) -> start the bot.
-    command: >
-      sh -c "npx prisma migrate deploy && node dist/seed.js && node dist/index.js"
+    logging: *default-logging
 
 volumes:
   postgres_data:
