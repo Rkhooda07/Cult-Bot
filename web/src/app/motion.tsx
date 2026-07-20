@@ -102,6 +102,11 @@ export function DiscordButton({
     const xTo = gsap.quickTo(el, "x", { duration: 0.4, ease: "power3.out" });
     const yTo = gsap.quickTo(el, "y", { duration: 0.4, ease: "power3.out" });
 
+    // GSAP owns this element's transform outright, scale included. A CSS
+    // hover:scale class would be silently overridden by the inline transform
+    // these tweens write, so keeping both in one system is the only way the
+    // lift actually fires.
+    const onEnter = () => gsap.to(el, { scale: 1.02, duration: 0.2, ease: "power2.out" });
     const onMove = (e: PointerEvent) => {
       const r = el.getBoundingClientRect();
       xTo((e.clientX - (r.left + r.width / 2)) * 0.25);
@@ -110,12 +115,15 @@ export function DiscordButton({
     const onLeave = () => {
       xTo(0);
       yTo(0);
+      gsap.to(el, { scale: 1, duration: 0.2, ease: "power2.out" });
     };
 
+    el.addEventListener("pointerenter", onEnter);
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerleave", onLeave);
 
     return () => {
+      el.removeEventListener("pointerenter", onEnter);
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerleave", onLeave);
     };
@@ -125,24 +133,34 @@ export function DiscordButton({
     <a
       ref={ref}
       href={INVITE_URL ?? "#"}
-      className={`group relative inline-flex w-full items-center justify-center rounded-xl font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blurple sm:w-auto ${
-        size === "lg" ? "min-h-14 px-10 text-lg" : "min-h-12 px-8"
+      className={`group relative inline-flex w-full items-center justify-center rounded-lg bg-gold font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold sm:w-auto ${
+        size === "lg" ? "min-h-14 px-9 text-lg" : "min-h-11 px-6 text-[15px]"
       }`}
     >
-      {/* Glow, base fill and hover fill are all opacity crossfades — no
-          box-shadow or background-position animation. */}
+      {/* Solid gold, no gradient. The only motion is scale + a glow that
+          fades in — both GPU-composited. */}
       <span
         aria-hidden
-        className="absolute -inset-2 -z-10 rounded-2xl bg-gradient-to-r from-blurple to-grape opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-60"
+        className="absolute -inset-3 -z-10 rounded-2xl bg-gold opacity-0 blur-2xl transition-opacity duration-200 ease-out group-hover:opacity-25"
       />
-      <span
-        aria-hidden
-        className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blurple to-grape"
-      />
-      <span
-        aria-hidden
-        className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-grape to-blurple opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-      />
+      {children}
+    </a>
+  );
+}
+
+/** Ghost secondary. Deliberately quiet so the gold button owns the hierarchy. */
+export function GhostLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-white/10 px-6 text-[15px] font-medium text-mist transition-[scale,border-color,color] duration-200 ease-out hover:scale-[1.02] hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold sm:w-auto"
+    >
       {children}
     </a>
   );

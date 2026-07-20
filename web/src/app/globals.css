@@ -1,25 +1,40 @@
 @import "tailwindcss";
 
 @theme {
-  /* Surfaces — the logo's background ramp */
-  --color-ink: #0b0b16;
-  --color-ink-deep: #07070e;
-  --color-indigo-deep: #1a1442;
+  /* Surfaces — charcoal, not pure black, so the grain has something to sit on */
+  --color-ink: #0b0b10;
+  --color-ink-deep: #08080c;
+  --color-ink-raised: #14141c;
+  --color-indigo-deep: #171430;
 
-  /* Accents — the logo's bracket gradient, plus the state colors */
+  /**
+   * ONE accent. Gold is the checkmark in the mark, and it now carries every
+   * emphasis and interactive moment on the page.
+   *
+   * Blurple and grape are deliberately NOT general-purpose accents anymore.
+   * They appear in exactly two places: the logo itself, and the Discord embed
+   * mockups where #5865F2 is Discord's real embed color and changing it would
+   * make the mockups wrong. Everything else is gold or neutral.
+   */
+  --color-gold: #f1c40f;
+  --color-gold-deep: #d4a908;
   --color-blurple: #5865f2;
   --color-grape: #9b59b6;
-  --color-gold: #f1c40f;
+
+  /* Kept for the Discord mockups' real embed colors */
   --color-lime: #2ecc71;
   --color-ember: #ff6b35;
 
-  /* Text */
-  --color-mist: #b6b9cc;
-  --color-dim: #8b8fa3;
+  /* Text — a proper ramp, not two grays */
+  --color-mist: #a8a8b8;
+  --color-dim: #6e6e80;
 
-  /* Discord's own client chrome — not brand colors, but the mockups are only
-     convincing at Discord's exact values. Kept namespaced so they never get
-     mistaken for CultBot tokens. */
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* Discord's own client chrome — the mockups are only convincing at
+     Discord's exact values. Namespaced so they can't be mistaken for ours. */
   --color-discord-chat: #313338;
   --color-discord-embed: #2b2d31;
   --color-discord-code: #1e1f22;
@@ -27,9 +42,6 @@
   --color-discord-muted: #949ba4;
   --color-discord-btn: #4e5058;
   --color-discord-green: #248046;
-
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
 
 html {
@@ -43,7 +55,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Ambient glow drift. CSS keyframes, not JS — stays off the main thread. */
+/**
+ * Film grain over the whole page. A single inline feTurbulence — no image
+ * request, no dependency. Very low opacity: it should read as texture on the
+ * charcoal, never as visible noise.
+ */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  /* soft-light keeps the blacks black — a plain overlay at any useful opacity
+     lifts them and the whole page reads hazy. */
+  mix-blend-mode: soft-light;
+  opacity: 0.45;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Ambient glow drift — CSS keyframes stay off the main thread. */
 @keyframes drift {
   from {
     transform: translate3d(-3%, -2%, 0) scale(1);
@@ -58,15 +88,58 @@ body {
 }
 
 /**
- * Command-row hover highlight.
+ * Command chips cycle a gold outline, one at a time, to draw the eye without
+ * anything moving. Pure CSS with a per-chip --i delay — no JS, no state, and
+ * the global reduced-motion clamp below already switches it off.
  *
- * An opacity crossfade on an overlay rather than a background-color
- * transition, so the hover animates the same two GPU-friendly properties as
- * everything else. The negative inset lets the highlight bleed past the text
- * without the row itself having padding that would shift the layout.
- *
- * Gated on (hover: hover) so a tap on a touchscreen never leaves a row stuck
- * in its highlighted state.
+ * The cycle rides on a ::after overlay so it only ever animates opacity, and
+ * so the hover styles on the chip itself never fight it.
+ */
+@keyframes chip-cycle {
+  0%,
+  16% {
+    opacity: 1;
+  }
+  24%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.chip::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1px solid rgb(241 196 15 / 0.55);
+  opacity: 0;
+  pointer-events: none;
+  animation: chip-cycle 10s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 2s);
+}
+
+/**
+ * The hero's XP bar fills one block at a time. Opacity only, staggered by an
+ * --i index, so it reads like a terminal drawing itself rather than a bar
+ * widening. Reduced motion collapses it to "already full" via the clamp below.
+ */
+@keyframes block-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.fill-block {
+  opacity: 0;
+  animation: block-in 120ms ease-out forwards;
+  animation-delay: calc(var(--i) * 55ms + 250ms);
+}
+
+/**
+ * Command-row hover highlight — an opacity crossfade on an overlay rather
+ * than a background-color transition, so it animates the same GPU-friendly
+ * properties as everything else. Gated on (hover: hover) so a tap on a
+ * touchscreen never leaves a row stuck highlighted.
  */
 @media (hover: hover) and (pointer: fine) {
   .cmd-row {
@@ -89,7 +162,7 @@ body {
   }
 }
 
-/* One global opt-out. Every animation added later inherits this. */
+/* One global opt-out. Every animation on the site inherits this. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -101,5 +174,10 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    /* Delays must be zeroed too. Clamping only the duration still leaves a
+       staggered sequence playing out over its full delay window — the XP bar
+       drew itself block by block for ~1s before this. */
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
   }
 }

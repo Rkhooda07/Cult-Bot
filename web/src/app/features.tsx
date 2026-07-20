@@ -67,7 +67,6 @@ type Category = {
   blurb: string;
   commands: string[];
   Icon: () => React.ReactElement;
-  tint: string;
 };
 
 const PERSONAL: Category = {
@@ -76,7 +75,6 @@ const PERSONAL: Category = {
     "Todos, goals, habits and reminders — each one a private panel you drive with buttons and modals instead of memorising sub-commands.",
   commands: ["/todo", "/goal", "/habit", "/remind add"],
   Icon: CheckIcon,
-  tint: "text-blurple",
 };
 
 const INTEGRATIONS: Category = {
@@ -85,7 +83,6 @@ const INTEGRATIONS: Category = {
     "Link GitHub, LeetCode and Codeforces once, and real work becomes XP automatically. GitHub also detects private-repo activity and renders your contribution graph.",
   commands: ["/link github", "/link leetcode", "/dev-stats"],
   Icon: CodeIcon,
-  tint: "text-lime",
 };
 
 const ACHIEVEMENTS: Category = {
@@ -94,7 +91,6 @@ const ACHIEVEMENTS: Category = {
     "Every completed todo, finished focus session and shipped commit awards XP. Levels climb, badges unlock as you hit milestones.",
   commands: ["/level", "/badges"],
   Icon: TrophyIcon,
-  tint: "text-gold",
 };
 
 const GRID: Category[] = [
@@ -104,7 +100,6 @@ const GRID: Category[] = [
       "Pomodoro sessions you start and stop in-channel, daily streaks that survive as long as you do, and a Productivity Score across everything you track.",
     commands: ["/focus start", "/streak", "/stats"],
     Icon: TimerIcon,
-    tint: "text-ember",
   },
   {
     title: "Community",
@@ -112,7 +107,6 @@ const GRID: Category[] = [
       "The social half: a shared team board, a guild XP leaderboard, and admin-created challenges your server takes on together.",
     commands: ["/board", "/leaderboard", "/challenge create"],
     Icon: UsersIcon,
-    tint: "text-grape",
   },
 ];
 
@@ -122,7 +116,7 @@ function Commands({ commands }: { commands: string[] }) {
       {commands.map((c) => (
         <li
           key={c}
-          className="rounded-md border border-white/10 bg-white/[0.04] px-2.5 py-1 font-mono text-[13px] text-mist"
+          className="rounded-md border border-white/10 px-2.5 py-1 font-mono text-[13px] text-dim transition-colors duration-200 hover:border-white/25 hover:text-mist"
         >
           {c}
         </li>
@@ -131,13 +125,13 @@ function Commands({ commands }: { commands: string[] }) {
   );
 }
 
-function Heading({ title, blurb, commands, Icon, tint }: Category) {
+function Heading({ title, blurb, commands, Icon }: Category) {
   return (
     <div>
-      <div className={`inline-flex rounded-lg bg-white/[0.06] p-2.5 ${tint}`}>
+      <div className="inline-flex rounded-lg border border-white/10 p-2.5 text-mist">
         <Icon />
       </div>
-      <h3 className="mt-4 text-2xl font-bold tracking-tight sm:text-3xl">
+      <h3 className="mt-5 font-display text-2xl font-semibold tracking-[-0.02em] sm:text-[2rem]">
         {title}
       </h3>
       <p className="mt-3 max-w-lg text-pretty leading-relaxed text-mist">
@@ -148,17 +142,17 @@ function Heading({ title, blurb, commands, Icon, tint }: Category) {
   );
 }
 
-function Card({ title, blurb, commands, Icon, tint }: Category) {
+function Card({ title, blurb, commands, Icon }: Category) {
   return (
-    <div className="group relative rounded-2xl border border-white/10 bg-white/[0.03] p-7 transition-transform duration-300 hover:-translate-y-1">
+    <div className="group relative min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-7 transition-transform duration-300 hover:-translate-y-1">
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 ring-1 ring-blurple/50 transition-opacity duration-300 group-hover:opacity-100"
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 ring-1 ring-gold/40 transition-opacity duration-300 group-hover:opacity-100"
       />
-      <div className={`inline-flex rounded-lg bg-white/[0.06] p-2.5 ${tint}`}>
+      <div className="inline-flex rounded-lg border border-white/10 p-2.5 text-mist transition-colors duration-200 group-hover:text-gold">
         <Icon />
       </div>
-      <h3 className="mt-4 text-xl font-bold tracking-tight">{title}</h3>
+      <h3 className="mt-5 font-display text-xl font-semibold tracking-[-0.02em]">{title}</h3>
       <p className="mt-2 text-pretty text-sm leading-relaxed text-mist">
         {blurb}
       </p>
@@ -179,10 +173,10 @@ function Spotlight({
 }) {
   return (
     <Reveal className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16" stagger={0.12}>
-      <div className={flip ? "lg:order-2" : ""}>
+      <div className={`min-w-0 ${flip ? "lg:order-2" : ""}`}>
         <Heading {...category} />
       </div>
-      <div className={flip ? "lg:order-1" : ""}>{children}</div>
+      <div className={`min-w-0 ${flip ? "lg:order-1" : ""}`}>{children}</div>
     </Reveal>
   );
 }
@@ -191,8 +185,8 @@ export default function Features() {
   return (
     <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
       <div className="max-w-2xl">
-        <p className="font-mono text-sm text-blurple">{"// what it does"}</p>
-        <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-5xl">
+        <p className="font-mono text-xs uppercase tracking-[0.18em] text-dim">{"// what it does"}</p>
+        <h2 className="mt-4 font-display text-3xl font-semibold tracking-[-0.03em] sm:text-5xl">
           Everything you already do, finally counted.
         </h2>
       </div>

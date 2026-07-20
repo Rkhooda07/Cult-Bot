@@ -7,12 +7,6 @@
  * If an embed changes in the bot, it should change here too.
  */
 
-/** The bot's progressBar() from src/utils/progressBar.ts, character for character. */
-function bar(percent: number, length = 10) {
-  const filled = Math.round((percent / 100) * length);
-  return "█".repeat(filled) + "░".repeat(length - filled);
-}
-
 /**
  * Reusable block-character progress bar. The bot renders these as inline code
  * inside an embed, so this matches that rather than drawing a styled div.
@@ -21,17 +15,41 @@ export function ProgressBar({
   percent,
   length = 10,
   className = "text-blurple",
+  animate = false,
 }: {
   percent: number;
   length?: number;
   className?: string;
+  /** Fill the bar one block at a time on load. Hero only. */
+  animate?: boolean;
 }) {
+  // The bot's progressBar() from src/utils/progressBar.ts, exactly.
+  const filled = Math.round((percent / 100) * length);
+
   return (
     <code
       className={`rounded bg-discord-code px-1.5 py-0.5 font-mono text-[13px] tracking-tighter ${className}`}
       aria-label={`${percent}% complete`}
     >
-      {bar(percent, length)}
+      {Array.from({ length }, (_, i) =>
+        i < filled && animate ? (
+          // Each filled block sits over a trough character and fades in on a
+          // staggered delay — animation, not state, so there is no hydration
+          // mismatch and the global reduced-motion clamp already covers it.
+          <span key={i} className="relative inline-block">
+            {"\u2591"}
+            <span
+              aria-hidden
+              style={{ "--i": i } as React.CSSProperties}
+              className="fill-block absolute inset-0"
+            >
+              {"\u2588"}
+            </span>
+          </span>
+        ) : (
+          <span key={i}>{i < filled ? "\u2588" : "\u2591"}</span>
+        ),
+      )}
     </code>
   );
 }
@@ -235,7 +253,7 @@ export function BroadcastMockup() {
 }
 
 /** src/commands/level/level.ts — COLORS.xp (#F1C40F), 15-char bar. */
-export function LevelMockup() {
+export function LevelMockup({ animate = false }: { animate?: boolean }) {
   return (
     <Message accent="#F1C40F" author="CultBot">
       <div className="flex gap-4">
@@ -251,7 +269,7 @@ export function LevelMockup() {
               <strong className="font-semibold text-white">500 XP</strong>
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <ProgressBar percent={84} length={15} className="text-gold" />
+              <ProgressBar percent={84} length={15} className="text-gold" animate={animate} />
               <span>(84%)</span>
             </div>
             <p>

@@ -2,125 +2,143 @@
 
 import gsap from "gsap";
 
-import { DiscordButton, useGsap } from "./motion";
+import { LevelMockup } from "./discord";
+import { DiscordButton, GhostLink, useGsap } from "./motion";
 
-/** The logo mark, transparent — the files in public/ bake in an opaque background. */
-function Wordmark() {
+/** The bracket mark. The only place the blurple/grape gradient still appears. */
+function Mark() {
   return (
-    <div className="flex items-center justify-center gap-4 sm:gap-5">
-      <svg
-        viewBox="0 0 512 512"
-        role="img"
-        aria-label="CultBot logo"
-        className="h-14 w-14 shrink-0 sm:h-20 sm:w-20"
-      >
-        <defs>
-          <linearGradient id="bracket" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#5865F2" />
-            <stop offset="100%" stopColor="#9B59B6" />
-          </linearGradient>
-        </defs>
-        <g
-          fill="none"
-          strokeWidth="34"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M 200 140 L 108 256 L 200 372" stroke="url(#bracket)" />
-          <path d="M 312 140 L 404 256 L 312 372" stroke="url(#bracket)" />
-          <path
-            d="M 224 262 L 248 290 L 294 222"
-            stroke="#F1C40F"
-            strokeWidth="30"
-          />
-        </g>
-      </svg>
-      <span className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-        Cult<span className="text-grape">Bot</span>
-      </span>
-    </div>
+    <svg
+      viewBox="0 0 512 512"
+      role="img"
+      aria-label="CultBot logo"
+      className="size-8"
+    >
+      <defs>
+        <linearGradient id="bracket" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#5865F2" />
+          <stop offset="100%" stopColor="#9B59B6" />
+        </linearGradient>
+      </defs>
+      <g fill="none" strokeWidth="34" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M 200 140 L 108 256 L 200 372" stroke="url(#bracket)" />
+        <path d="M 312 140 L 404 256 L 312 372" stroke="url(#bracket)" />
+        <path d="M 224 262 L 248 290 L 294 222" stroke="#F1C40F" strokeWidth="30" />
+      </g>
+    </svg>
   );
 }
 
 const COMMANDS = ["/todo", "/focus", "/streak", "/level", "/board"];
 
 export default function Hero() {
-  // Same reduced-motion gate as every other animation on the page. On load
-  // rather than on scroll, so no ScrollTrigger here.
-  const root = useGsap<HTMLElement>(() => {
+  const root = useGsap<HTMLElement>((el) => {
     gsap.from("[data-reveal]", {
       opacity: 0,
-      y: 16,
+      y: 14,
       duration: 0.5,
-      stagger: 0.08,
+      stagger: 0.07,
       ease: "power2.out",
       clearProps: "all",
     });
+
+    // The embed drifts slightly slower than the page as you scroll away —
+    // enough parallax to feel dimensional, not enough to notice as an effect.
+    const art = el.querySelector("[data-parallax]");
+    if (art) {
+      gsap.to(art, {
+        y: -60,
+        ease: "none",
+        scrollTrigger: {
+          trigger: el,
+          start: "top top",
+          end: "bottom top",
+          scrub: 0.6,
+        },
+      });
+    }
   });
 
   return (
     <section
       ref={root}
-      className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6 py-24 text-center"
+      className="relative overflow-hidden border-b border-white/5 px-6 pb-20 pt-28 sm:pt-32 lg:pb-28"
     >
-      {/* Background: base gradient + two drifting accent glows */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,var(--color-indigo-deep)_0%,var(--color-ink)_60%)]"
-      >
-        <div className="animate-drift absolute left-1/2 top-1/4 h-[38rem] w-[38rem] -translate-x-1/2 rounded-full bg-blurple/20 blur-[120px]" />
-        <div className="animate-drift absolute left-1/2 top-1/3 h-[26rem] w-[26rem] -translate-x-1/3 rounded-full bg-grape/15 blur-[110px] [animation-duration:22s] [animation-direction:alternate-reverse]" />
+      {/* Off-centre glow, weighted toward the copy rather than the middle. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="animate-drift absolute -left-40 top-0 h-[36rem] w-[36rem] rounded-full bg-indigo-deep opacity-70 blur-[130px]" />
+        <div className="absolute left-1/4 top-10 h-72 w-72 rounded-full bg-gold/[0.07] blur-[120px]" />
       </div>
 
-      <div data-reveal>
-        <Wordmark />
-      </div>
+      <div className="mx-auto grid max-w-6xl items-center gap-16 lg:grid-cols-12 lg:gap-10">
+        {/* Copy — 7 of 12 columns, left-aligned. */}
+        <div className="lg:col-span-7">
+          <div data-reveal className="flex items-center gap-2.5">
+            <Mark />
+            <span className="font-display text-lg font-semibold tracking-tight">
+              CultBot
+            </span>
+          </div>
 
-      <h1
-        data-reveal
-        className="mt-10 max-w-3xl text-balance text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-6xl"
-      >
-        Ship code. Earn XP.{" "}
-        <span className="bg-gradient-to-r from-blurple to-grape bg-clip-text text-transparent">
-          Keep the streak.
-        </span>
-      </h1>
-
-      <p
-        data-reveal
-        className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-mist"
-      >
-        CultBot tracks your todos, goals, focus sessions and habits inside
-        Discord — and turns the follow-through into streaks, XP and a
-        leaderboard your server can see.
-      </p>
-
-      <div
-        data-reveal
-        className="mt-10 flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row"
-      >
-        <DiscordButton />
-        <a
-          href="#commands"
-          className="flex min-h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-8 font-semibold text-mist transition hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blurple sm:w-auto"
-        >
-          View Commands
-        </a>
-      </div>
-
-      <ul
-        data-reveal
-        className="mt-12 flex flex-wrap items-center justify-center gap-2 font-mono text-sm text-dim"
-      >
-        {COMMANDS.map((command) => (
-          <li
-            key={command}
-            className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-1.5"
+          <div
+            data-reveal
+            className="mt-10 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.18em] text-dim"
           >
-            {command}
-          </li>
-        ))}
-      </ul>
+            <span className="size-1.5 rounded-full bg-gold" />
+            Developer productivity, gamified
+          </div>
+
+          <h1
+            data-reveal
+            className="mt-5 max-w-[15ch] font-display text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.035em] sm:text-6xl lg:text-[4.25rem]"
+          >
+            Ship code. Earn XP. Keep the streak.
+          </h1>
+
+          <p
+            data-reveal
+            className="mt-7 max-w-md text-pretty leading-relaxed text-mist"
+          >
+            CultBot tracks your todos, goals, focus sessions and habits inside
+            Discord — and turns the follow-through into streaks, XP and a
+            leaderboard your server can see.
+          </p>
+
+          <div
+            data-reveal
+            className="mt-9 flex w-full flex-col gap-3 sm:flex-row sm:items-center"
+          >
+            <DiscordButton />
+            <GhostLink href="#commands">View commands</GhostLink>
+          </div>
+
+          <ul
+            data-reveal
+            className="mt-12 flex flex-wrap gap-2 font-mono text-[13px] text-dim"
+          >
+            {COMMANDS.map((command, i) => (
+              <li
+                key={command}
+                style={{ "--i": i } as React.CSSProperties}
+                className="chip relative rounded-md border border-white/10 px-2.5 py-1 transition-[scale,border-color,color] duration-200 ease-out hover:scale-[1.04] hover:border-white/25 hover:text-mist"
+              >
+                {command}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Art — 5 of 12, nudged off-axis so the composition isn't a clean split. */}
+        <div data-reveal className="lg:col-span-5">
+          <div data-parallax className="relative lg:-mr-12 lg:rotate-[1.5deg]">
+            <div
+              aria-hidden
+              className="absolute -inset-8 -z-10 rounded-[2rem] bg-gold/[0.06] blur-3xl"
+            />
+            <LevelMockup animate />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
