@@ -22,11 +22,17 @@
 
 ## Screenshots
 
-> 📸 Add a screenshot of the `/todo` panel here
->
-> 📸 Add a screenshot of the `/dev-stats` rendered contribution graph here
->
-> 📸 Add a screenshot of the `/leaderboard` embed here
+**`/todo`** — add, complete, edit, and delete tasks entirely from buttons and modals.
+
+![The /todo panel](src/assets/readme-todo.png)
+
+**`/dev-stats`** — GitHub and LeetCode activity for the day, with a full contribution graph rendered server-side.
+
+![The /dev-stats contribution graph](src/assets/readme-dev-stats.png)
+
+**`/leaderboard`** — guild-scoped XP rankings for members who have opted in.
+
+![The /leaderboard embed](src/assets/readme-leaderboard.png)
 
 ---
 
