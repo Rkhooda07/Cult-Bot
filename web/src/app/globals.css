@@ -136,6 +136,39 @@ body::after {
 }
 
 /**
+ * Nav underline. Grows in from the left on hover, then retracts out to the
+ * right on leave — the origin flip is what makes it read as one continuous
+ * gesture rather than a bar that just reverses itself.
+ *
+ * scaleX only, so it never touches layout.
+ */
+.nav-link::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  width: 100%;
+  background: var(--color-gold);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+/* Keyboard users get the same affordance. */
+.nav-link:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/**
  * Command-row hover highlight — an opacity crossfade on an overlay rather
  * than a background-color transition, so it animates the same GPU-friendly
  * properties as everything else. Gated on (hover: hover) so a tap on a

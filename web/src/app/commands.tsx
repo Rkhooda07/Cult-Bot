@@ -57,7 +57,7 @@ export default function Commands() {
   return (
     <section
       id="commands"
-      className="scroll-mt-16 border-t border-white/5 bg-ink-deep"
+      className="scroll-mt-24 border-t border-white/5 bg-ink-deep"
     >
       <div className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
         <div className="max-w-2xl">

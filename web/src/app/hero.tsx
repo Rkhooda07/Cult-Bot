@@ -5,30 +5,6 @@ import gsap from "gsap";
 import { LevelMockup } from "./discord";
 import { DiscordButton, GhostLink, useGsap } from "./motion";
 
-/** The bracket mark. The only place the blurple/grape gradient still appears. */
-function Mark() {
-  return (
-    <svg
-      viewBox="0 0 512 512"
-      role="img"
-      aria-label="CultBot logo"
-      className="size-8"
-    >
-      <defs>
-        <linearGradient id="bracket" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#5865F2" />
-          <stop offset="100%" stopColor="#9B59B6" />
-        </linearGradient>
-      </defs>
-      <g fill="none" strokeWidth="34" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M 200 140 L 108 256 L 200 372" stroke="url(#bracket)" />
-        <path d="M 312 140 L 404 256 L 312 372" stroke="url(#bracket)" />
-        <path d="M 224 262 L 248 290 L 294 222" stroke="#F1C40F" strokeWidth="30" />
-      </g>
-    </svg>
-  );
-}
-
 const COMMANDS = ["/todo", "/focus", "/streak", "/level", "/board"];
 
 export default function Hero() {
@@ -62,7 +38,7 @@ export default function Hero() {
   return (
     <section
       ref={root}
-      className="relative overflow-hidden border-b border-white/5 px-6 pb-20 pt-28 sm:pt-32 lg:pb-28"
+      className="relative overflow-hidden border-b border-white/5 px-6 pb-20 pt-16 sm:pt-20 lg:pb-28"
     >
       {/* Off-centre glow, weighted toward the copy rather than the middle. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -73,16 +49,9 @@ export default function Hero() {
       <div className="mx-auto grid max-w-6xl items-center gap-16 lg:grid-cols-12 lg:gap-10">
         {/* Copy — 7 of 12 columns, left-aligned. */}
         <div className="lg:col-span-7">
-          <div data-reveal className="flex items-center gap-2.5">
-            <Mark />
-            <span className="font-display text-lg font-semibold tracking-tight">
-              CultBot
-            </span>
-          </div>
-
           <div
             data-reveal
-            className="mt-10 flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.18em] text-dim"
+            className="flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.18em] text-dim"
           >
             <span className="size-1.5 rounded-full bg-gold" />
             Developer productivity, gamified

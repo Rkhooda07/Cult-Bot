@@ -95,7 +95,7 @@ export function DiscordButton({
   size = "md",
   children = "Add to Discord",
 }: {
-  size?: "md" | "lg";
+  size?: "sm" | "md" | "lg";
   children?: React.ReactNode;
 }) {
   const ref = useGsap<HTMLAnchorElement>((el) => {
@@ -134,7 +134,11 @@ export function DiscordButton({
       ref={ref}
       href={INVITE_URL ?? "#"}
       className={`group relative inline-flex w-full items-center justify-center rounded-lg bg-gold font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gold sm:w-auto ${
-        size === "lg" ? "min-h-14 px-9 text-lg" : "min-h-11 px-6 text-[15px]"
+        size === "lg"
+          ? "min-h-14 px-9 text-lg"
+          : size === "sm"
+            ? "min-h-9 px-4 text-[13px]"
+            : "min-h-11 px-6 text-[15px]"
       }`}
     >
       {/* Solid gold, no gradient. The only motion is scale + a glow that

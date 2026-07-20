@@ -183,7 +183,7 @@ function Spotlight({
 
 export default function Features() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-24 sm:py-32">
+    <section id="features" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-24 sm:py-32">
       <div className="max-w-2xl">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-dim">{"// what it does"}</p>
         <h2 className="mt-4 font-display text-3xl font-semibold tracking-[-0.03em] sm:text-5xl">

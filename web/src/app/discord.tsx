@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 /**
  * Recreations of the bot's actual embeds, not generic cards.
  *
@@ -78,14 +80,23 @@ function Thumb() {
   );
 }
 
-const BOT_AVATAR = (
-  <div
-    aria-hidden
-    className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blurple to-grape text-sm font-semibold text-white"
-  >
-    C
-  </div>
-);
+/**
+ * The bot's actual Discord avatar. The icon file bakes in its own background,
+ * which is exactly right here — Discord crops a square avatar to a circle, so
+ * this is what a real server sees.
+ */
+function BotAvatar({ size }: { size: number }) {
+  return (
+    <Image
+      src="/cultbot-icon-512.png"
+      alt=""
+      width={size}
+      height={size}
+      className="shrink-0 rounded-full"
+      style={{ width: size, height: size }}
+    />
+  );
+}
 
 /**
  * Discord's message chrome: avatar, author line, BOT tag, then the embed.
@@ -106,7 +117,7 @@ function Message({
   return (
     <div className="w-full rounded-lg bg-discord-chat p-4 shadow-xl shadow-black/40 ring-1 ring-white/5">
       <div className="flex gap-3">
-        {BOT_AVATAR}
+        <BotAvatar size={40} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-medium text-white">{author}</span>
@@ -132,12 +143,7 @@ function Message({
 function Footer({ text }: { text: string }) {
   return (
     <div className="mt-3 flex items-center gap-2 text-xs text-discord-muted">
-      <span
-        aria-hidden
-        className="grid size-4 place-items-center rounded-full bg-gradient-to-br from-blurple to-grape text-[8px] font-bold"
-      >
-        C
-      </span>
+      <BotAvatar size={16} />
       {text}
     </div>
   );
