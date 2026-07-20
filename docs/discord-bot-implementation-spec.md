@@ -1,6 +1,6 @@
 # Developer Productivity Bot — Implementation Spec (v1.0)
 
-**Name:** CultBot (originally codenamed DevOS in this spec; renamed 2026-07-20)
+**Name:** CultBot
 **One-liner:** A developer-first productivity operating system inside Discord — todos, goals, focus sessions, streaks, XP, and an AI coach, all driven by embeds and buttons instead of typed commands.
 
 This document is the single source of truth. Any AI agent building this should read this file in full before writing code, and should not deviate from the locked decisions in Section 2 without flagging it to you first.
