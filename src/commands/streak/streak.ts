@@ -49,7 +49,7 @@ buttonHandlers.set("streak:board", async (interaction: ButtonInteraction) => {
     });
     embed.setDescription(lines.join("\n"));
   }
-  embed.setFooter({ text: "DevOS • Active streaks in this server" });
+  embed.setFooter({ text: "CultBot • Active streaks in this server" });
 
   await interaction.editReply({ embeds: [embed], components: [buildToggleRow(interaction.user.id, "me")] });
 });
@@ -72,7 +72,7 @@ function buildPersonalEmbed(username: string, current: number, best: number): Em
       `Current Streak: **${current}** day${current === 1 ? "" : "s"} 🔥\n` +
       `Best Streak: **${best}** day${best === 1 ? "" : "s"} 🏆`
     )
-    .setFooter({ text: `DevOS • ${username}` });
+    .setFooter({ text: `CultBot • ${username}` });
 }
 
 function buildToggleRow(userId: string, target: "board" | "me"): ActionRowBuilder<ButtonBuilder> {

@@ -105,7 +105,7 @@ export function startWeeklyRecap(client: Client): void {
           // Build recap embed (using stats green color)
           const embed = createEmbed("stats")
             .setTitle("📈 Weekly Productivity Recap")
-            .setDescription(`Here's a summary of your achievements in DevOS over the past 7 days!`)
+            .setDescription(`Here's a summary of your achievements in CultBot over the past 7 days!`)
             .addFields(
               {
                 name: "📝 Tasks Completed",

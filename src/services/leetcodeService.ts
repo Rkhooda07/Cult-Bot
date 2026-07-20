@@ -116,7 +116,7 @@ export async function fetchSolvedCount(
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "User-Agent": "DevOS-Bot",
+        "User-Agent": "CultBot",
         Referer: "https://leetcode.com",
       },
       body: JSON.stringify({ query, variables: { username } }),
@@ -185,7 +185,7 @@ export async function getSolvesToday(username: string): Promise<number | null> {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "User-Agent": "DevOS-Bot",
+        "User-Agent": "CultBot",
         Referer: "https://leetcode.com",
       },
       body: JSON.stringify({ query, variables: { username } }),

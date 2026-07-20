@@ -47,7 +47,7 @@ function createTodayEmbed(
   const embed = createEmbed("today")
     .setTitle("📅 Today's Overview")
     .setDescription(dateStr)
-    .setFooter({ text: `DevOS • ${user.username}` });
+    .setFooter({ text: `CultBot • ${user.username}` });
 
   if (openTodos.length > 0) {
     const todoLines = openTodos.slice(0, 5).map((t) => {

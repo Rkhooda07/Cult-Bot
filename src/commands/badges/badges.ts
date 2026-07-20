@@ -36,7 +36,7 @@ commands.set("badges", {
         `Earned: **${earnedKeys.size}** / **${allBadges.length}**`
       )
       .setThumbnail(interaction.user.displayAvatarURL())
-      .setFooter({ text: `DevOS • ${username}` });
+      .setFooter({ text: `CultBot • ${username}` });
 
     for (const badge of allBadges) {
       const isEarned = earnedKeys.has(badge.key);

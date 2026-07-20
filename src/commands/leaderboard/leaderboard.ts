@@ -54,7 +54,7 @@ commands.set("leaderboard", {
       const embed = createEmbed("leaderboard")
         .setTitle(`${scope === "weekly" ? "📅 Weekly" : "🏆 All-Time"} Leaderboard`)
         .setDescription(lines.join("\n"))
-        .setFooter({ text: `DevOS • ${scope === "weekly" ? "This week" : "All time"}` });
+        .setFooter({ text: `CultBot • ${scope === "weekly" ? "This week" : "All time"}` });
 
       await interaction.editReply({ embeds: [embed] });
     } catch (error) {

@@ -26,9 +26,9 @@ export function createReminderEmbed(
     .setDescription(buildReminderList(reminders, userTimezone));
 
   if (totalPages > 1) {
-    embed.setFooter({ text: `Page ${page}/${totalPages} • DevOS` });
+    embed.setFooter({ text: `Page ${page}/${totalPages} • CultBot` });
   } else {
-    embed.setFooter({ text: "DevOS" });
+    embed.setFooter({ text: "CultBot" });
   }
 
   const components = buildActionRows(reminders, page, totalPages);

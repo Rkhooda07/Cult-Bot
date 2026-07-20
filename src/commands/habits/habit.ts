@@ -62,7 +62,7 @@ function buildPanelEmbed(
 ): { embed: EmbedBuilder; components: ActionRowBuilder<ButtonBuilder>[] } {
   const embed = createEmbed("badges") // Section 6.1: no explicit "habit" colour — use badges teal (#1ABC9C) as closest fit for habits
     .setTitle("🌱 Your Habits")
-    .setFooter({ text: `DevOS • ${username}` });
+    .setFooter({ text: `CultBot • ${username}` });
 
   if (habits.length === 0) {
     embed.setDescription(

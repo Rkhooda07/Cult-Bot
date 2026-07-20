@@ -72,9 +72,9 @@ async function renderBoardPanel(
   }
 
   if (totalPages > 1) {
-    embed.setFooter({ text: `Page ${currentPage}/${totalPages} • DevOS` });
+    embed.setFooter({ text: `Page ${currentPage}/${totalPages} • CultBot` });
   } else {
-    embed.setFooter({ text: "DevOS" });
+    embed.setFooter({ text: "CultBot" });
   }
 
   const components: ActionRowBuilder<ButtonBuilder>[] = [];

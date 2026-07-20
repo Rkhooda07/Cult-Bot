@@ -38,9 +38,9 @@ export function createTodoEmbed(
   }
 
   if (totalPages > 1) {
-    embed.setFooter({ text: `Page ${page}/${totalPages} • DevOS` });
+    embed.setFooter({ text: `Page ${page}/${totalPages} • CultBot` });
   } else {
-    embed.setFooter({ text: "DevOS" });
+    embed.setFooter({ text: "CultBot" });
   }
 
   const components = buildActionRows(userId, page, totalPages, todos, stats.total - stats.completed, stats.total);

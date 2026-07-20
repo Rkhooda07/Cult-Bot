@@ -1,4 +1,4 @@
-# CultBot (DevOS) — Claude Operating Manual
+# CultBot — Claude Operating Manual
 
 ## Developer Brain
 
@@ -21,7 +21,7 @@ Never depend on prior chat history to recover context. Always reconstruct it fro
 **Name:** `cultbot`
 *Matches the folder at `Developer Brain/projects/cultbot/`.*
 
-**What it is:** DevOS — a Discord bot that turns a server into a developer productivity operating system: todos, goals, reminders, focus sessions, streaks, XP, habits, GitHub/LeetCode/Codeforces integrations, an AI coach, and guild leaderboards — driven entirely by buttons, select menus, and modals instead of typed sub-commands.
+**What it is:** CultBot — a Discord bot that turns a server into a developer productivity operating system: todos, goals, reminders, focus sessions, streaks, XP, habits, GitHub/LeetCode/Codeforces integrations, an AI coach, and guild leaderboards — driven entirely by buttons, select menus, and modals instead of typed sub-commands.
 
 **Stack:** TypeScript (strict), discord.js v14, Prisma + PostgreSQL, node-cron, zod, luxon, chrono-node, pino, NVIDIA NIM (Nemotron) for the AI coach, `@napi-rs/canvas` for rendered contribution graphs. Dockerized (bot + postgres).
 

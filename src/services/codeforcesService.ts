@@ -121,7 +121,7 @@ export async function fetchSolvedToday(handle: string): Promise<number | null> {
     // count is generous but bounded; CF returns newest submissions first.
     const res = await fetch(
       `https://codeforces.com/api/user.status?handle=${encodeURIComponent(handle)}&from=1&count=1000`,
-      { headers: { "User-Agent": "DevOS-Bot", Accept: "application/json" } }
+      { headers: { "User-Agent": "CultBot", Accept: "application/json" } }
     );
 
     if (!res.ok) {
@@ -177,7 +177,7 @@ export async function fetchHandleInfo(handle: string): Promise<CodeforcesHandleI
   try {
     const res = await fetch(
       `https://codeforces.com/api/user.info?handles=${encodeURIComponent(handle)}`,
-      { headers: { "User-Agent": "DevOS-Bot", Accept: "application/json" } }
+      { headers: { "User-Agent": "CultBot", Accept: "application/json" } }
     );
     const payload: any = await res.json().catch(() => null);
 

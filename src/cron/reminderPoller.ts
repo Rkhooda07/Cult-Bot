@@ -63,7 +63,7 @@ export function startReminderPoller(client: Client): void {
                     title: "⏰ Reminder",
                     description: reminder.message,
                     fields: [{ name: "Time", value: timeStr, inline: true }],
-                    footer: { text: "DevOS" },
+                    footer: { text: "CultBot" },
                     timestamp: new Date().toISOString(),
                   },
                 ],

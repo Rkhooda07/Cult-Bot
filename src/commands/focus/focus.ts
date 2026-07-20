@@ -88,7 +88,7 @@ function buildSessionEmbed(user: { username: string; displayAvatarURL: () => str
       { name: "Ends", value: `<t:${Math.floor(endTime.getTime() / 1000)}:T>`, inline: true },
       { name: "Session ID", value: `\`${session.id.slice(0, 8)}\``, inline: true }
     )
-    .setFooter({ text: `DevOS • ${user.username}` });
+    .setFooter({ text: `CultBot • ${user.username}` });
 }
 
 function buildCompleteButton(userId: string, sessionId: string): ActionRowBuilder<ButtonBuilder> {
@@ -120,7 +120,7 @@ buttonHandlers.set("focus:complete", async (interaction) => {
   const embed = createEmbed("focus")
     .setTitle("✅ Focus Session Complete!")
     .setDescription(`Great job! You earned **+25 XP**.\nTotal XP: **${xpResult.newXP}** (Level ${xpResult.newLevel})`)
-    .setFooter({ text: `DevOS • ${interaction.user.username}` });
+    .setFooter({ text: `CultBot • ${interaction.user.username}` });
 
   await interaction.editReply({ embeds: [embed], components: [] });
 

@@ -29,7 +29,7 @@ model User {
   1. **Username** — 📝 X open tasks (Y%)
   `█████░░░░░`
   ```
-- **Footer:** `Page X/Y • DevOS`
+- **Footer:** `Page X/Y • CultBot`
 
 ### Custom ID Structure
 - Custom ID: `board:page:public:<pageNumber>`

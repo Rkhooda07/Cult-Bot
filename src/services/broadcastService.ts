@@ -156,7 +156,7 @@ function buildBroadcastEmbed(args: {
     .setDescription(
       `**${displayName}** ${input.description} — **+${input.xpAwarded} XP**`
     )
-    .setFooter({ text: "DevOS" })
+    .setFooter({ text: "CultBot" })
     .setTimestamp();
 
   if (avatarUrl) {

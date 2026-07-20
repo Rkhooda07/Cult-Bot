@@ -85,7 +85,7 @@ export async function evaluate(userId: string): Promise<EarnedBadgeInfo[]> {
                 `*${badge.description}*`
               )
               .setThumbnail(discordUser.displayAvatarURL())
-              .setFooter({ text: `DevOS • ${discordUser.username}` });
+              .setFooter({ text: `CultBot • ${discordUser.username}` });
 
             await discordUser.send({ embeds: [embed] });
             logger.info({ userId, badgeKey: badge.key }, "Sent Badge Earned DM to user");

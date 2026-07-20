@@ -39,9 +39,9 @@ export function createGoalEmbed(
   }
 
   if (totalPages > 1) {
-    embed.setFooter({ text: `Page ${page}/${totalPages} • DevOS` });
+    embed.setFooter({ text: `Page ${page}/${totalPages} • CultBot` });
   } else {
-    embed.setFooter({ text: "DevOS" });
+    embed.setFooter({ text: "CultBot" });
   }
 
   // Owner-aware rows are the single source of truth: every customId embeds the

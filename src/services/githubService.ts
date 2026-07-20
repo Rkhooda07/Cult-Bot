@@ -146,7 +146,7 @@ export async function fetchNewCommits(
 ): Promise<GithubPushActivity | null> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
-    "User-Agent": "DevOS-Bot",
+    "User-Agent": "CultBot",
     "X-GitHub-Api-Version": "2022-11-28",
   };
   if (env.GITHUB_TOKEN) {
@@ -277,7 +277,7 @@ export async function fetchContributionCalendar(username: string): Promise<Contr
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
-    "User-Agent": "DevOS-Bot",
+    "User-Agent": "CultBot",
   };
   if (env.GITHUB_TOKEN) {
     headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;

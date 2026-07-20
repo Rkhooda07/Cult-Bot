@@ -16,7 +16,7 @@
 
 ## What is this?
 
-**DevOS** is a developer-first productivity bot for Discord. It gives each member their own todos, goals, reminders, focus sessions, streaks, XP, and dev-account integrations, then layers a public, guild-scoped social surface on top — leaderboards, a shared completion board, and community challenges. Every interaction is driven by **buttons, select menus, and modals** rather than typed sub-commands, and the whole thing is gamified with XP, levels, and auto-awarded badges.
+**CultBot** is a developer-first productivity bot for Discord. It gives each member their own todos, goals, reminders, focus sessions, streaks, XP, and dev-account integrations, then layers a public, guild-scoped social surface on top — leaderboards, a shared completion board, and community challenges. Every interaction is driven by **buttons, select menus, and modals** rather than typed sub-commands, and the whole thing is gamified with XP, levels, and auto-awarded badges.
 
 ---
 
@@ -89,7 +89,7 @@ Detailed design and behavioral spec lives in [`docs/discord-bot-implementation-s
 ```bash
 # 1. Clone & install
 git clone <repo-url>
-cd devos-bot
+cd CultBot
 npm install
 
 # 2. Configure environment

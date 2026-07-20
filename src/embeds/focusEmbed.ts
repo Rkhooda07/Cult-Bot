@@ -32,7 +32,7 @@ export function buildSessionEmbed(
         inline: true,
       }
     )
-    .setFooter({ text: `DevOS • Session ${session.id.slice(0, 8)}` })
+    .setFooter({ text: `CultBot • Session ${session.id.slice(0, 8)}` })
     .setTimestamp();
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -51,7 +51,7 @@ export function buildSessionStoppedEmbed(durationMin: number): EmbedBuilder {
     .setTitle("🍅 Focus Session Stopped")
     .setDescription(`Session abandoned after **${durationMin} min** planned.`)
     .setColor(0xed4245)
-    .setFooter({ text: "DevOS" })
+    .setFooter({ text: "CultBot" })
     .setTimestamp();
 }
 
@@ -67,7 +67,7 @@ export function buildSessionCompletedEmbed(
       { name: "Total XP", value: xpResult.newXP.toString(), inline: true },
       { name: "Level", value: xpResult.newLevel.toString(), inline: true }
     )
-    .setFooter({ text: "DevOS" })
+    .setFooter({ text: "CultBot" })
     .setTimestamp();
 
   if (xpResult.leveledUp) {
@@ -81,7 +81,7 @@ export function buildNoActiveSessionEmbed(): EmbedBuilder {
   return createEmbed("error")
     .setTitle("No Active Session")
     .setDescription("You don't have a focus session in progress. Use `/focus start` to begin one.")
-    .setFooter({ text: "DevOS" })
+    .setFooter({ text: "CultBot" })
     .setTimestamp();
 }
 
@@ -89,6 +89,6 @@ export function buildSessionAlreadyActiveEmbed(): EmbedBuilder {
   return createEmbed("error")
     .setTitle("Session Already Active")
     .setDescription("You already have a focus session in progress. Use `/focus stop` to abandon it first.")
-    .setFooter({ text: "DevOS" })
+    .setFooter({ text: "CultBot" })
     .setTimestamp();
 }

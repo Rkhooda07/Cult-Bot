@@ -49,7 +49,7 @@ commands.set("level", {
         `Total XP: **${currentXp} XP**`
       )
       .setThumbnail(interaction.user.displayAvatarURL())
-      .setFooter({ text: `DevOS • ${username}` });
+      .setFooter({ text: `CultBot • ${username}` });
 
     await interaction.editReply({ embeds: [embed] });
   },

@@ -25,7 +25,7 @@ export type ColorDomain = keyof typeof COLORS;
 
 /**
  * Create a base EmbedBuilder pre-wired with the correct domain color,
- * the standard "DevOS" footer, and the current timestamp.
+ * the standard "CultBot" footer, and the current timestamp.
  *
  * Every embed in the bot should start here, then add title / description / fields.
  *
@@ -37,7 +37,7 @@ export function createEmbed(domain: ColorDomain): EmbedBuilder {
   // until ready fires. Only pass iconURL when we actually have one — Discord
   // rejects an empty string, so no-icon must omit the field entirely.
   const iconURL = getIconUrl();
-  const footer = iconURL ? { text: "DevOS", iconURL } : { text: "DevOS" };
+  const footer = iconURL ? { text: "CultBot", iconURL } : { text: "CultBot" };
 
   return new EmbedBuilder()
     .setColor(COLORS[domain])

@@ -57,5 +57,5 @@ The metrics are computed as follows:
   - `🍅 Focus Time`: `X hours (Y sessions completed)`
   - `🎯 Goals Finished`: `X goals`
   - `🏆 XP Earned`: `X XP`
-- **Footer:** `DevOS`
+- **Footer:** `CultBot`
 - **Timestamp:** Current time.

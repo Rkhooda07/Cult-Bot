@@ -67,7 +67,7 @@ commands.set("stats", {
     // Build the stats dashboard embed
     const embed = createEmbed("stats")
       .setTitle("📈 Productivity Dashboard")
-      .setDescription("An overview of your achievements and work focus in DevOS.")
+      .setDescription("An overview of your achievements and work focus in CultBot.")
       .addFields(
         {
           name: "📝 Tasks (Todos)",
@@ -95,7 +95,7 @@ commands.set("stats", {
           inline: false,
         }
       )
-      .setFooter({ text: `DevOS • ${interaction.user.username}` });
+      .setFooter({ text: `CultBot • ${interaction.user.username}` });
 
     await interaction.editReply({ embeds: [embed] });
   },
