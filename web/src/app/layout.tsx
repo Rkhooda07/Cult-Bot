@@ -18,17 +18,53 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+/**
+ * Absolute base for OG/Twitter image URLs — crawlers reject relative ones.
+ *
+ * Resolution order needs no configuration on Vercel: it reads the production
+ * domain Vercel injects at build time. NEXT_PUBLIC_SITE_URL overrides it once
+ * a custom domain is attached; the localhost value is only ever the local
+ * dev fallback.
+ */
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "http://localhost:3000");
+
+const TITLE = "CultBot — Developer productivity, gamified";
+const DESCRIPTION =
+  "A Discord bot that turns your server into a developer productivity system: todos, goals, focus sessions, habits, streaks, XP and guild leaderboards.";
+
 export const metadata: Metadata = {
-  title: "CultBot — Developer productivity, gamified",
-  description:
-    "A Discord bot that turns your server into a developer productivity system: todos, goals, focus sessions, habits, streaks, XP and leaderboards.",
-  icons: { icon: "/cultbot-icon.svg" },
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  keywords: [
+    "Discord bot",
+    "developer productivity",
+    "pomodoro",
+    "habit tracker",
+    "GitHub streaks",
+    "LeetCode",
+    "gamification",
+  ],
+  // Icons and the OG image come from the app/ file conventions:
+  // icon.svg, apple-icon.png, opengraph-image.png.
   openGraph: {
-    title: "CultBot — Developer productivity, gamified",
-    description:
-      "Todos, goals, focus sessions and habits — tracked with streaks, XP and leaderboards, all inside Discord.",
-    images: ["/cultbot-wordmark.png"],
+    type: "website",
+    siteName: "CultBot",
+    url: SITE_URL,
+    title: TITLE,
+    description: DESCRIPTION,
   },
+  twitter: {
+    // Twitter falls back to og:image, so opengraph-image.png covers both.
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({

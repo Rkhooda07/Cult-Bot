@@ -25,9 +25,11 @@
   --color-lime: #2ecc71;
   --color-ember: #ff6b35;
 
-  /* Text — a proper ramp, not two grays */
+  /* Text ramp. Contrast on --color-ink, measured, all WCAG AA at body size:
+     mist 8.4:1, dim 5.0:1. dim was #6e6e80 (3.93:1) and failed AA everywhere
+     it was used — eyebrows, chips, the footer credit. */
   --color-mist: #a8a8b8;
-  --color-dim: #6e6e80;
+  --color-dim: #7f7f92;
 
   --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -136,11 +138,8 @@ body::after {
 }
 
 /**
- * Nav underline. Grows in from the left on hover, then retracts out to the
- * right on leave — the origin flip is what makes it read as one continuous
- * gesture rather than a bar that just reverses itself.
- *
- * scaleX only, so it never touches layout.
+ * Nav underline: sweeps left-to-right on hover and retraces back to the left
+ * on leave. scaleX only, so it never touches layout.
  */
 .nav-link::after {
   content: "";
