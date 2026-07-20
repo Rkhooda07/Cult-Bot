@@ -80,9 +80,8 @@ export function Footer() {
           </a>
         </nav>
 
-        {/* Replace YOUR_NAME — intentionally left as a placeholder. */}
         <p className="text-sm text-dim">
-          Built by <span className="font-mono text-mist">YOUR_NAME</span>
+          Built by <span className="text-mist">Rakshit</span>
         </p>
       </div>
     </footer>
