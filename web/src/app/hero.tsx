@@ -38,7 +38,7 @@ export default function Hero() {
   return (
     <section
       ref={root}
-      className="relative overflow-hidden border-b border-white/5 px-6 pb-20 pt-16 sm:pt-20 lg:pb-28"
+      className="relative flex min-h-[calc(100svh-65px)] items-center overflow-hidden border-b border-white/5 px-6 py-14 sm:py-16"
     >
       {/* Off-centre glow, weighted toward the copy rather than the middle. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
@@ -46,7 +46,7 @@ export default function Hero() {
         <div className="absolute left-1/4 top-10 h-72 w-72 rounded-full bg-gold/[0.07] blur-[120px]" />
       </div>
 
-      <div className="mx-auto grid max-w-6xl items-center gap-16 lg:grid-cols-12 lg:gap-10">
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-14 lg:grid-cols-12 lg:gap-10">
         {/* Copy — 7 of 12 columns, left-aligned. */}
         <div className="lg:col-span-7">
           <div
@@ -59,14 +59,14 @@ export default function Hero() {
 
           <h1
             data-reveal
-            className="mt-5 max-w-[15ch] font-display text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.035em] sm:text-6xl lg:text-[4.25rem]"
+            className="mt-4 max-w-[15ch] font-display text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.035em] sm:text-6xl lg:text-[4.25rem]"
           >
             Ship code. Earn XP. Keep the streak.
           </h1>
 
           <p
             data-reveal
-            className="mt-7 max-w-md text-pretty leading-relaxed text-mist"
+            className="mt-6 max-w-md text-pretty leading-relaxed text-mist"
           >
             CultBot tracks your todos, goals, focus sessions and habits inside
             Discord — and turns the follow-through into streaks, XP and a
@@ -75,7 +75,7 @@ export default function Hero() {
 
           <div
             data-reveal
-            className="mt-9 flex w-full flex-col gap-3 sm:flex-row sm:items-center"
+            className="mt-8 flex w-full flex-col gap-3 sm:flex-row sm:items-center"
           >
             <DiscordButton />
             <GhostLink href="#commands">View commands</GhostLink>
@@ -83,7 +83,7 @@ export default function Hero() {
 
           <ul
             data-reveal
-            className="mt-12 flex flex-wrap gap-2 font-mono text-[13px] text-dim"
+            className="mt-10 flex flex-wrap gap-2 font-mono text-[13px] text-dim"
           >
             {COMMANDS.map((command, i) => (
               <li

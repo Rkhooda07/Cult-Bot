@@ -147,25 +147,27 @@ body::after {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 1px;
+  height: 2px;
   width: 100%;
+  border-radius: 1px;
   background: var(--color-gold);
+  /* Anchored left in both directions, so the line sweeps out to the right on
+     hover and retraces back to the left on leave — there and back, rather
+     than continuing off the far edge. */
+  transform-origin: left;
   transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 320ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .nav-link:hover::after {
     transform: scaleX(1);
-    transform-origin: left;
   }
 }
 
 /* Keyboard users get the same affordance. */
 .nav-link:focus-visible::after {
   transform: scaleX(1);
-  transform-origin: left;
 }
 
 /**
