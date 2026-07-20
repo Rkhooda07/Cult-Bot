@@ -17,6 +17,17 @@
   --color-mist: #b6b9cc;
   --color-dim: #8b8fa3;
 
+  /* Discord's own client chrome — not brand colors, but the mockups are only
+     convincing at Discord's exact values. Kept namespaced so they never get
+     mistaken for NerdCult tokens. */
+  --color-discord-chat: #313338;
+  --color-discord-embed: #2b2d31;
+  --color-discord-code: #1e1f22;
+  --color-discord-text: #dbdee1;
+  --color-discord-muted: #949ba4;
+  --color-discord-btn: #4e5058;
+  --color-discord-green: #248046;
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 }
