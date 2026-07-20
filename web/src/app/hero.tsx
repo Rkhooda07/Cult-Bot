@@ -7,7 +7,7 @@ const INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL;
 
 if (process.env.NODE_ENV === "development" && !INVITE_URL) {
   console.warn(
-    "[NerdCult] NEXT_PUBLIC_DISCORD_INVITE_URL is not set — the “Add to Discord” button links to # until you set it in .env.local",
+    "[CultBot] NEXT_PUBLIC_DISCORD_INVITE_URL is not set — the “Add to Discord” button links to # until you set it in .env.local",
   );
 }
 
@@ -18,7 +18,7 @@ function Wordmark() {
       <svg
         viewBox="0 0 512 512"
         role="img"
-        aria-label="NerdCult logo"
+        aria-label="CultBot logo"
         className="h-14 w-14 shrink-0 sm:h-20 sm:w-20"
       >
         <defs>
@@ -43,13 +43,13 @@ function Wordmark() {
         </g>
       </svg>
       <span className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-        Nerd<span className="text-grape">Cult</span>
+        Cult<span className="text-grape">Bot</span>
       </span>
     </div>
   );
 }
 
-const COMMANDS = ["/todo", "/focus", "/streak", "/xp", "/board"];
+const COMMANDS = ["/todo", "/focus", "/streak", "/level", "/board"];
 
 export default function Hero() {
   const root = useRef<HTMLElement>(null);
@@ -105,7 +105,7 @@ export default function Hero() {
         data-reveal
         className="mt-6 max-w-xl text-pretty text-lg leading-relaxed text-mist"
       >
-        NerdCult tracks your todos, goals, focus sessions and habits inside
+        CultBot tracks your todos, goals, focus sessions and habits inside
         Discord — and turns the follow-through into streaks, XP and a
         leaderboard your server can see.
       </p>

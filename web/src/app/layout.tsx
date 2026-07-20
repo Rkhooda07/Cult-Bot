@@ -9,15 +9,15 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NerdCult — Developer productivity, gamified",
+  title: "CultBot — Developer productivity, gamified",
   description:
     "A Discord bot that turns your server into a developer productivity system: todos, goals, focus sessions, habits, streaks, XP and leaderboards.",
-  icons: { icon: "/nerdcult-icon.svg" },
+  icons: { icon: "/cultbot-icon.svg" },
   openGraph: {
-    title: "NerdCult — Developer productivity, gamified",
+    title: "CultBot — Developer productivity, gamified",
     description:
       "Todos, goals, focus sessions and habits — tracked with streaks, XP and leaderboards, all inside Discord.",
-    images: ["/nerdcult-wordmark.png"],
+    images: ["/cultbot-wordmark.png"],
   },
 };
 

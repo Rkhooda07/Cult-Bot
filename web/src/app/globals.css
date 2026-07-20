@@ -19,7 +19,7 @@
 
   /* Discord's own client chrome — not brand colors, but the mockups are only
      convincing at Discord's exact values. Kept namespaced so they never get
-     mistaken for NerdCult tokens. */
+     mistaken for CultBot tokens. */
   --color-discord-chat: #313338;
   --color-discord-embed: #2b2d31;
   --color-discord-code: #1e1f22;

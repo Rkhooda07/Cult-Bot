@@ -65,7 +65,7 @@ const BOT_AVATAR = (
     aria-hidden
     className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blurple to-grape text-sm font-semibold text-white"
   >
-    N
+    C
   </div>
 );
 
@@ -118,7 +118,7 @@ function Footer({ text }: { text: string }) {
         aria-hidden
         className="grid size-4 place-items-center rounded-full bg-gradient-to-br from-blurple to-grape text-[8px] font-bold"
       >
-        N
+        C
       </span>
       {text}
     </div>
@@ -162,7 +162,7 @@ export function TodoMockup() {
   return (
     <Message
       accent="#5865F2"
-      author="NerdCult"
+      author="CultBot"
       buttons={
         <Buttons
           items={[
@@ -198,7 +198,7 @@ export function TodoMockup() {
         </div>
       </div>
 
-      <Footer text="NerdCult" />
+      <Footer text="CultBot" />
     </Message>
   );
 }
@@ -206,7 +206,7 @@ export function TodoMockup() {
 /** src/cron/githubPoller.ts + broadcastService.ts — COLORS.xp (#F1C40F). */
 export function BroadcastMockup() {
   return (
-    <Message accent="#F1C40F" author="NerdCult">
+    <Message accent="#F1C40F" author="CultBot">
       <div className="flex gap-4">
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-white">
@@ -216,7 +216,7 @@ export function BroadcastMockup() {
             <strong className="font-semibold text-white">rk_hooda</strong> pushed
             3 commits to{" "}
             <code className="rounded bg-discord-code px-1.5 py-0.5 font-mono text-[13px]">
-              nerdcult
+              cultbot
             </code>{" "}
             — <strong className="font-semibold text-gold">+15 XP</strong>
           </p>
@@ -229,7 +229,7 @@ export function BroadcastMockup() {
         </div>
         <Thumb />
       </div>
-      <Footer text="NerdCult" />
+      <Footer text="CultBot" />
     </Message>
   );
 }
@@ -237,7 +237,7 @@ export function BroadcastMockup() {
 /** src/commands/level/level.ts — COLORS.xp (#F1C40F), 15-char bar. */
 export function LevelMockup() {
   return (
-    <Message accent="#F1C40F" author="NerdCult">
+    <Message accent="#F1C40F" author="CultBot">
       <div className="flex gap-4">
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold text-white">
@@ -262,7 +262,7 @@ export function LevelMockup() {
         </div>
         <Thumb />
       </div>
-      <Footer text="NerdCult • rk_hooda" />
+      <Footer text="CultBot • rk_hooda" />
     </Message>
   );
 }
