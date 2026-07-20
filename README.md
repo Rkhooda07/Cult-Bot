@@ -24,15 +24,15 @@
 
 **`/todo`** — add, complete, edit, and delete tasks entirely from buttons and modals.
 
-![The /todo panel](src/assets/readme-todo.png)
+<img src="src/assets/readme-todo.png" alt="The /todo panel" width="560">
 
 **`/dev-stats`** — GitHub and LeetCode activity for the day, with a full contribution graph rendered server-side.
 
-![The /dev-stats contribution graph](src/assets/readme-dev-stats.png)
+<img src="src/assets/readme-dev-stats.png" alt="The /dev-stats contribution graph" width="560">
 
 **`/leaderboard`** — guild-scoped XP rankings for members who have opted in.
 
-![The /leaderboard embed](src/assets/readme-leaderboard.png)
+<img src="src/assets/readme-leaderboard.png" alt="The /leaderboard embed" width="560">
 
 ---
 
