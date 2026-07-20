@@ -26,8 +26,10 @@ const jetbrainsMono = JetBrains_Mono({
  * a custom domain is attached; the localhost value is only ever the local
  * dev fallback.
  */
+// `||`, not `??` — an env var declared but left blank is an empty string, not
+// undefined, and `new URL("")` throws at build time.
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.NEXT_PUBLIC_SITE_URL ||
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : "http://localhost:3000");
