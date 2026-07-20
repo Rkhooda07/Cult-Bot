@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  /* Surfaces — the logo's background ramp */
+  --color-ink: #0b0b16;
+  --color-ink-deep: #07070e;
+  --color-indigo-deep: #1a1442;
+
+  /* Accents — the logo's bracket gradient, plus the state colors */
+  --color-blurple: #5865f2;
+  --color-grape: #9b59b6;
+  --color-gold: #f1c40f;
+  --color-lime: #2ecc71;
+  --color-ember: #ff6b35;
+
+  /* Text */
+  --color-mist: #b6b9cc;
+  --color-dim: #8b8fa3;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: #fff;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient glow drift. CSS keyframes, not JS — stays off the main thread. */
+@keyframes drift {
+  from {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 3%, 0) scale(1.15);
+  }
+}
+
+.animate-drift {
+  animation: drift 16s ease-in-out infinite alternate;
+}
+
+/* One global opt-out. Every animation added later inherits this. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
