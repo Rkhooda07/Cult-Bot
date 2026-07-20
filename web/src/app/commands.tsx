@@ -1,3 +1,5 @@
+import { Reveal } from "./motion";
+
 /**
  * Descriptions are the bot's real setDescription() strings — see
  * src/commands/<name>/. Keep them in sync when a command's description changes.
@@ -75,7 +77,7 @@ export default function Commands() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-x-12 gap-y-12 md:grid-cols-2">
+        <Reveal className="mt-16 grid gap-x-12 gap-y-12 md:grid-cols-2" stagger={0.06}>
           {GROUPS.map((group) => (
             <div key={group.title}>
               <h3
@@ -87,7 +89,7 @@ export default function Commands() {
                 {group.commands.map(([name, description]) => (
                   <div
                     key={name}
-                    className="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:gap-4"
+                    className="cmd-row flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:gap-4"
                   >
                     <dt className="shrink-0 font-mono text-sm text-white sm:w-40">
                       {name}
@@ -100,7 +102,7 @@ export default function Commands() {
               </dl>
             </div>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

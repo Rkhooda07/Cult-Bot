@@ -1,4 +1,5 @@
 import { BroadcastMockup, LevelMockup, TodoMockup } from "./discord";
+import { Reveal } from "./motion";
 
 /* Stroke icons rather than emoji — the emoji in the mockups are real bot
    output, but the page chrome shouldn't lean on them as an icon set. */
@@ -149,7 +150,11 @@ function Heading({ title, blurb, commands, Icon, tint }: Category) {
 
 function Card({ title, blurb, commands, Icon, tint }: Category) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-7">
+    <div className="group relative rounded-2xl border border-white/10 bg-white/[0.03] p-7 transition-transform duration-300 hover:-translate-y-1">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 ring-1 ring-blurple/50 transition-opacity duration-300 group-hover:opacity-100"
+      />
       <div className={`inline-flex rounded-lg bg-white/[0.06] p-2.5 ${tint}`}>
         <Icon />
       </div>
@@ -173,12 +178,12 @@ function Spotlight({
   flip?: boolean;
 }) {
   return (
-    <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+    <Reveal className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16" stagger={0.12}>
       <div className={flip ? "lg:order-2" : ""}>
         <Heading {...category} />
       </div>
       <div className={flip ? "lg:order-1" : ""}>{children}</div>
-    </div>
+    </Reveal>
   );
 }
 
@@ -205,11 +210,11 @@ export default function Features() {
           <LevelMockup />
         </Spotlight>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <Reveal className="grid gap-6 md:grid-cols-2">
           {GRID.map((c) => (
             <Card key={c.title} {...c} />
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

@@ -57,6 +57,38 @@ body {
   animation: drift 16s ease-in-out infinite alternate;
 }
 
+/**
+ * Command-row hover highlight.
+ *
+ * An opacity crossfade on an overlay rather than a background-color
+ * transition, so the hover animates the same two GPU-friendly properties as
+ * everything else. The negative inset lets the highlight bleed past the text
+ * without the row itself having padding that would shift the layout.
+ *
+ * Gated on (hover: hover) so a tap on a touchscreen never leaves a row stuck
+ * in its highlighted state.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .cmd-row {
+    position: relative;
+  }
+
+  .cmd-row::before {
+    content: "";
+    position: absolute;
+    inset: 0 -0.75rem;
+    border-radius: 0.375rem;
+    background: rgb(255 255 255 / 0.04);
+    opacity: 0;
+    transition: opacity 150ms ease;
+    pointer-events: none;
+  }
+
+  .cmd-row:hover::before {
+    opacity: 1;
+  }
+}
+
 /* One global opt-out. Every animation added later inherits this. */
 @media (prefers-reduced-motion: reduce) {
   html {

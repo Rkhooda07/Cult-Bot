@@ -1,15 +1,8 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 
-const INVITE_URL = process.env.NEXT_PUBLIC_DISCORD_INVITE_URL;
-
-if (process.env.NODE_ENV === "development" && !INVITE_URL) {
-  console.warn(
-    "[CultBot] NEXT_PUBLIC_DISCORD_INVITE_URL is not set — the “Add to Discord” button links to # until you set it in .env.local",
-  );
-}
+import { DiscordButton, useGsap } from "./motion";
 
 /** The logo mark, transparent — the files in public/ bake in an opaque background. */
 function Wordmark() {
@@ -52,26 +45,18 @@ function Wordmark() {
 const COMMANDS = ["/todo", "/focus", "/streak", "/level", "/board"];
 
 export default function Hero() {
-  const root = useRef<HTMLElement>(null);
-
-  useLayoutEffect(() => {
-    // matchMedia is GSAP's native reduced-motion gate: the tween is never
-    // created when the user opts out, so the final state renders as-is.
-    const mm = gsap.matchMedia(root);
-
-    mm.add("(prefers-reduced-motion: no-preference)", () => {
-      gsap.from("[data-reveal]", {
-        opacity: 0,
-        y: 16,
-        duration: 0.5,
-        stagger: 0.08,
-        ease: "power2.out",
-        clearProps: "all",
-      });
+  // Same reduced-motion gate as every other animation on the page. On load
+  // rather than on scroll, so no ScrollTrigger here.
+  const root = useGsap<HTMLElement>(() => {
+    gsap.from("[data-reveal]", {
+      opacity: 0,
+      y: 16,
+      duration: 0.5,
+      stagger: 0.08,
+      ease: "power2.out",
+      clearProps: "all",
     });
-
-    return () => mm.revert();
-  }, []);
+  });
 
   return (
     <section
@@ -114,12 +99,7 @@ export default function Hero() {
         data-reveal
         className="mt-10 flex w-full flex-col items-center gap-4 sm:w-auto sm:flex-row"
       >
-        <a
-          href={INVITE_URL ?? "#"}
-          className="flex min-h-12 w-full items-center justify-center rounded-xl bg-gradient-to-r from-blurple to-grape px-8 font-semibold shadow-lg shadow-blurple/25 transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blurple active:scale-[0.98] sm:w-auto"
-        >
-          Add to Discord
-        </a>
+        <DiscordButton />
         <a
           href="#commands"
           className="flex min-h-12 w-full items-center justify-center rounded-xl border border-white/15 bg-white/5 px-8 font-semibold text-mist transition hover:border-white/30 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blurple sm:w-auto"
